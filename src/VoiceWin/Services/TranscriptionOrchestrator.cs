@@ -12,6 +12,7 @@ public class TranscriptionOrchestrator : IDisposable
     private readonly TextPasteService _pasteService;
     private readonly GlobalHotkeyService _hotkeyService;
     private readonly SettingsService _settingsService;
+    private readonly SoundService _soundService;
 
     private bool _isProcessing;
     private bool _isStreaming;
@@ -34,6 +35,7 @@ public class TranscriptionOrchestrator : IDisposable
         _llmService = new GroqLlmService();
         _pasteService = new TextPasteService();
         _hotkeyService = new GlobalHotkeyService();
+        _soundService = new SoundService();
 
         _hotkeyService.TargetVirtualKey = _settingsService.Settings.HotkeyVirtualKey;
         _hotkeyService.Mode = _settingsService.Settings.HotkeyMode;
@@ -41,8 +43,18 @@ public class TranscriptionOrchestrator : IDisposable
         _hotkeyService.HotkeyPressed += OnHotkeyPressed;
         _hotkeyService.HotkeyReleased += OnHotkeyReleased;
 
-        _audioService.RecordingStarted += (s, e) => RecordingStarted?.Invoke(this, EventArgs.Empty);
-        _audioService.RecordingStopped += (s, e) => RecordingStopped?.Invoke(this, EventArgs.Empty);
+        _audioService.RecordingStarted += (s, e) =>
+        {
+            if (_settingsService.Settings.PlaySoundFeedback)
+                _soundService.PlayStartSound();
+            RecordingStarted?.Invoke(this, EventArgs.Empty);
+        };
+        _audioService.RecordingStopped += (s, e) =>
+        {
+            if (_settingsService.Settings.PlaySoundFeedback)
+                _soundService.PlayEndSound();
+            RecordingStopped?.Invoke(this, EventArgs.Empty);
+        };
         _audioService.AudioChunkAvailable += OnAudioChunkAvailable;
 
         _streamingService.TranscriptReceived += OnStreamingTranscriptReceived;
@@ -254,5 +266,6 @@ public class TranscriptionOrchestrator : IDisposable
         _hotkeyService.Dispose();
         _audioService.Dispose();
         _streamingService.Dispose();
+        _soundService.Dispose();
     }
 }
