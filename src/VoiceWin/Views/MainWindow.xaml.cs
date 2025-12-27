@@ -27,6 +27,9 @@ public partial class MainWindow : Window
         SelectComboItemByTag(ProviderCombo, settings.TranscriptionProvider);
         SelectComboItemByTag(HotkeyModeCombo, settings.HotkeyMode);
         SelectComboItemByTag(LanguageCombo, settings.Language);
+
+        AiEnhancementCheckBox.IsChecked = settings.AiEnhancementEnabled;
+        AiEnhancementPromptBox.Text = settings.AiEnhancementPrompt;
     }
 
     private void SelectComboItemByTag(ComboBox combo, string tag)
@@ -99,6 +102,8 @@ public partial class MainWindow : Window
             settings.TranscriptionProvider = GetSelectedTag(ProviderCombo);
             settings.HotkeyMode = GetSelectedTag(HotkeyModeCombo);
             settings.Language = GetSelectedTag(LanguageCombo);
+            settings.AiEnhancementEnabled = AiEnhancementCheckBox.IsChecked ?? false;
+            settings.AiEnhancementPrompt = AiEnhancementPromptBox.Text;
         });
 
         _app.Orchestrator.UpdateHotkeySettings();

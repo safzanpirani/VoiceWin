@@ -96,6 +96,7 @@
                 <ComboBox x:Name="HotkeyModeCombo" Margin="0,0,0,16">
                     <ComboBoxItem Content="Hold to Record" Tag="hold"/>
                     <ComboBoxItem Content="Tap to Toggle" Tag="toggle"/>
+                    <ComboBoxItem Content="Hybrid (Hold or Tap)" Tag="hybrid"/>
                 </ComboBox>
 
                 <TextBlock Text="Language" 
@@ -116,6 +117,23 @@
                     <ComboBoxItem Content="Chinese" Tag="zh"/>
                     <ComboBoxItem Content="Hindi" Tag="hi"/>
                 </ComboBox>
+
+                <TextBlock Text="AI Enhancement" 
+                           FontSize="16" 
+                           FontWeight="SemiBold" 
+                           Foreground="{StaticResource TextBrush}"
+                           Margin="0,8,0,12"/>
+
+                <CheckBox x:Name="AiEnhancementCheckBox" 
+                          Content="Enable AI Enhancement"
+                          Margin="0,0,0,12"/>
+
+                <Label Content="Enhancement Prompt" Margin="0,0,0,4"/>
+                <TextBox x:Name="AiEnhancementPromptBox" 
+                         AcceptsReturn="True" 
+                         TextWrapping="Wrap" 
+                         Height="120" 
+                         Margin="0,0,0,24"/>
 
                 <Button Content="Save Settings" 
                         Click="SaveSettings_Click"

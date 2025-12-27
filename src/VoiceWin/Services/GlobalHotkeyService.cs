@@ -16,6 +16,8 @@ public class GlobalHotkeyService : IDisposable
     public string Mode { get; set; } = "hold";
     
     private bool _toggleState;
+    private bool _isRecording;
+    private const int HybridHoldThresholdMs = 250;
     
     private const int WH_KEYBOARD_LL = 13;
     private const int WM_KEYDOWN = 0x0100;
@@ -78,6 +80,31 @@ public class GlobalHotkeyService : IDisposable
                     else if (isKeyUpEvent)
                     {
                         _isKeyDown = false;
+                    }
+                }
+                else if (Mode == "hybrid")
+                {
+                    if (isKeyDownEvent && !_isKeyDown)
+                    {
+                        _isKeyDown = true;
+                        _keyDownTime = DateTime.UtcNow;
+                        
+                        if (!_isRecording)
+                        {
+                            _isRecording = true;
+                            HotkeyPressed?.Invoke(this, EventArgs.Empty);
+                        }
+                    }
+                    else if (isKeyUpEvent && _isKeyDown)
+                    {
+                        _isKeyDown = false;
+                        var holdDuration = (DateTime.UtcNow - _keyDownTime).TotalMilliseconds;
+                        
+                        if (holdDuration >= HybridHoldThresholdMs)
+                        {
+                            _isRecording = false;
+                            HotkeyReleased?.Invoke(this, EventArgs.Empty);
+                        }
                     }
                 }
 

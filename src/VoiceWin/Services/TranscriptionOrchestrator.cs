@@ -7,6 +7,7 @@ public class TranscriptionOrchestrator : IDisposable
     private readonly AudioRecordingService _audioService;
     private readonly GroqTranscriptionService _groqService;
     private readonly DeepgramTranscriptionService _deepgramService;
+    private readonly GroqLlmService _llmService;
     private readonly TextPasteService _pasteService;
     private readonly GlobalHotkeyService _hotkeyService;
     private readonly SettingsService _settingsService;
@@ -26,6 +27,7 @@ public class TranscriptionOrchestrator : IDisposable
         _audioService = new AudioRecordingService();
         _groqService = new GroqTranscriptionService();
         _deepgramService = new DeepgramTranscriptionService();
+        _llmService = new GroqLlmService();
         _pasteService = new TextPasteService();
         _hotkeyService = new GlobalHotkeyService();
 
@@ -108,8 +110,28 @@ public class TranscriptionOrchestrator : IDisposable
 
             if (result.Success && !string.IsNullOrEmpty(result.Text))
             {
-                _pasteService.PasteText(result.Text);
-                StatusChanged?.Invoke(this, $"Transcribed in {result.Duration.TotalMilliseconds:F0}ms");
+                var finalText = result.Text;
+                var totalDuration = result.Duration;
+
+                if (settings.AiEnhancementEnabled && !string.IsNullOrEmpty(settings.GroqApiKey))
+                {
+                    StatusChanged?.Invoke(this, "Enhancing...");
+                    
+                    var enhanceResult = await _llmService.EnhanceTextAsync(
+                        result.Text,
+                        settings.GroqApiKey,
+                        settings.AiEnhancementPrompt,
+                        settings.AiEnhancementModel);
+
+                    if (enhanceResult.Success && !string.IsNullOrEmpty(enhanceResult.Text))
+                    {
+                        finalText = enhanceResult.Text;
+                        totalDuration += enhanceResult.Duration;
+                    }
+                }
+
+                _pasteService.PasteText(finalText);
+                StatusChanged?.Invoke(this, $"Transcribed in {totalDuration.TotalMilliseconds:F0}ms");
             }
             else
             {
