@@ -9,36 +9,21 @@ Native Windows Speech-to-Text Transcription App
 - **Hybrid mode** - hold for quick recordings, tap to toggle for longer ones
 - **Real-time Streaming** - see transcriptions appear as you speak (Deepgram)
 - **AI Enhancement** - polish transcriptions with LLM-powered rewriting
+- **Sound Feedback** - audio cues when recording starts/stops
+- **Tray Icon Status** - visual indicator shows recording (red), processing (orange), or ready (green)
 - Supports **Groq Whisper API** (fast, free tier available)
 - Supports **Deepgram nova-3** (high quality, batch or streaming)
 - System tray app - runs in background
 - Auto-paste transcribed text to focused window
+- Single portable EXE - no installation required
 
 ## Requirements
 
-- Windows 10/11
-- .NET 8.0 SDK (for building only)
+- Windows 10/11 x64
 
-## Quick Start (Pre-built)
+## Quick Start
 
-Download `VoiceWin.exe` from Releases and run it - no installation needed.
-
-## Setup (From Source)
-
-1. Install .NET 8 SDK from https://dotnet.microsoft.com/download/dotnet/8.0
-
-2. Build the project:
-```bash
-dotnet restore
-dotnet build src/VoiceWin -c Release
-```
-
-3. Run the app:
-```bash
-src\VoiceWin\bin\Release\net8.0-windows\VoiceWin.exe
-```
-
-4. Configure your API keys in the settings window
+Download `VoiceWin.exe` from [Releases](https://github.com/safzanpirani/voicewin/releases) and run it - no installation needed.
 
 ## API Keys
 
@@ -71,11 +56,11 @@ src\VoiceWin\bin\Release\net8.0-windows\VoiceWin.exe
 Records audio, then transcribes after you stop. Fast and reliable.
 
 ### Streaming Mode (Deepgram Streaming)
-Transcribes in real-time as you speak - text appears immediately. Best used with **Toggle** hotkey mode. Note: some applications may strip trailing spaces between transcript chunks.
+Transcribes in real-time as you speak - text appears immediately. Best used with **Toggle** hotkey mode.
 
 ## AI Enhancement
 
-Enable AI Enhancement to automatically polish your transcriptions using Groq's LLM API. The feature:
+Enable AI Enhancement to automatically polish your transcriptions using Groq's LLM API:
 
 - Fixes grammar, spelling, and punctuation
 - Removes filler words and stutters
@@ -84,19 +69,35 @@ Enable AI Enhancement to automatically polish your transcriptions using Groq's L
 
 Customize the enhancement prompt in settings to match your preferred output style.
 
-## Settings Location
+## Tray Icon
+
+The system tray icon shows the current status:
+- 🟢 **Green** - Ready
+- 🔴 **Red** - Recording
+- 🟠 **Orange** - Processing/Transcribing
+
+## Settings
 
 Settings are stored at:
 ```
 %APPDATA%\VoiceWin\settings.json
 ```
 
-## Build for Release
+## Build from Source
+
+Requires .NET 8.0 SDK.
 
 ```bash
-dotnet publish src/VoiceWin -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
+# Development build
+dotnet restore
+dotnet build src/VoiceWin -c Release
+
+# Self-contained single-file EXE (no .NET required to run)
+dotnet publish src/VoiceWin -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
 ```
 
-Output will be in `src/VoiceWin/bin/Release/net8.0-windows/win-x64/publish/`
+Output: `src/VoiceWin/bin/Release/net8.0-windows/win-x64/publish/VoiceWin.exe` (~156MB)
 
-This creates a single portable EXE (~156MB) that runs on any Windows 10/11 x64 machine without requiring .NET installation.
+## License
+
+MIT
