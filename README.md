@@ -7,9 +7,10 @@ Native Windows Speech-to-Text Transcription App
 - **Hold Right Alt** to record, release to transcribe and paste
 - **Tap Right Alt** to toggle recording (configurable)
 - **Hybrid mode** - hold for quick recordings, tap to toggle for longer ones
+- **Real-time Streaming** - see transcriptions appear as you speak (Deepgram)
 - **AI Enhancement** - polish transcriptions with LLM-powered rewriting
 - Supports **Groq Whisper API** (fast, free tier available)
-- Supports **Deepgram nova-3** (high quality)
+- Supports **Deepgram nova-3** (high quality, batch or streaming)
 - System tray app - runs in background
 - Auto-paste transcribed text to focused window
 
@@ -64,6 +65,14 @@ src\VoiceWin\bin\Release\net8.0-windows\VoiceWin.exe
 - **Tap to Toggle**: Tap once to start, tap again to stop
 - **Hybrid (Hold or Tap)**: Best of both - hold for quick recordings (≥250ms), or tap to toggle for longer sessions
 
+## Transcription Providers
+
+### Batch Mode (Groq, Deepgram)
+Records audio, then transcribes after you stop. Fast and reliable.
+
+### Streaming Mode (Deepgram Streaming)
+Transcribes in real-time as you speak - text appears immediately. Best used with **Toggle** hotkey mode. Note: some applications may strip trailing spaces between transcript chunks.
+
 ## AI Enhancement
 
 Enable AI Enhancement to automatically polish your transcriptions using Groq's LLM API. The feature:
@@ -90,4 +99,4 @@ dotnet publish src/VoiceWin -c Release -r win-x64 --self-contained true -p:Publi
 
 Output will be in `src/VoiceWin/bin/Release/net8.0-windows/win-x64/publish/`
 
-This creates a single portable EXE (~70MB) that runs on any Windows 10/11 x64 machine without requiring .NET installation.
+This creates a single portable EXE (~156MB) that runs on any Windows 10/11 x64 machine without requiring .NET installation.
