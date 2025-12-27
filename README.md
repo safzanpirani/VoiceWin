@@ -58,6 +58,8 @@ Records audio, then transcribes after you stop. Fast and reliable.
 ### Streaming Mode (Deepgram Streaming)
 Transcribes in real-time as you speak - text appears immediately. Best used with **Toggle** hotkey mode.
 
+> **Note:** When starting streaming mode, there's a ~1 second delay while connecting to the Deepgram WebSocket. The "recording started" sound plays once the connection is live and transcription is ready - so wait for the sound before speaking.
+
 > **Note:** Streaming mode adds a trailing space after each transcript chunk to separate words. Some applications (especially terminals, code editors, and certain text fields) may strip trailing whitespace from clipboard paste. If words are running together, try:
 > - Using **non-streaming mode** instead (more reliable for these apps)
 > - Adjusting your terminal/editor settings to preserve trailing spaces
