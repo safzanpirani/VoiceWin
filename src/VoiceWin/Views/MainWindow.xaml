@@ -1,0 +1,131 @@
+<Window x:Class="VoiceWin.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:tb="http://www.hardcodet.net/taskbar"
+        Title="VoiceWin" 
+        Height="600" 
+        Width="450"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource BackgroundBrush}"
+        ResizeMode="CanMinimize">
+    
+    <Window.Resources>
+        <ContextMenu x:Key="TrayMenu">
+            <MenuItem Header="Show Settings" Click="ShowWindow_Click"/>
+            <Separator/>
+            <MenuItem Header="Exit" Click="Exit_Click"/>
+        </ContextMenu>
+    </Window.Resources>
+
+    <Grid>
+        <tb:TaskbarIcon x:Name="TaskbarIcon"
+                        IconSource="/Assets/icon.ico"
+                        ToolTipText="VoiceWin - Ready"
+                        ContextMenu="{StaticResource TrayMenu}"
+                        TrayMouseDoubleClick="TaskbarIcon_TrayMouseDoubleClick"/>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="24">
+                <TextBlock Text="VoiceWin" 
+                           FontSize="28" 
+                           FontWeight="Bold" 
+                           Foreground="{StaticResource TextBrush}"
+                           Margin="0,0,0,8"/>
+                
+                <TextBlock Text="Speech-to-Text Transcription" 
+                           FontSize="14" 
+                           Foreground="{StaticResource TextMutedBrush}"
+                           Margin="0,0,0,24"/>
+
+                <Border Background="{StaticResource SurfaceBrush}" 
+                        CornerRadius="8" 
+                        Padding="16" 
+                        Margin="0,0,0,16">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Status" 
+                                       FontWeight="SemiBold" 
+                                       Foreground="{StaticResource TextBrush}"/>
+                            <Ellipse x:Name="StatusIndicator" 
+                                     Grid.Column="1" 
+                                     Width="10" 
+                                     Height="10" 
+                                     Fill="{StaticResource SuccessBrush}"/>
+                        </Grid>
+                        <TextBlock x:Name="StatusText" 
+                                   Text="Ready - Press Right Alt to record" 
+                                   Foreground="{StaticResource TextMutedBrush}"/>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Text="API Keys" 
+                           FontSize="16" 
+                           FontWeight="SemiBold" 
+                           Foreground="{StaticResource TextBrush}"
+                           Margin="0,8,0,12"/>
+
+                <Label Content="Groq API Key" Margin="0,0,0,4"/>
+                <TextBox x:Name="GroqApiKeyBox" 
+                         Margin="0,0,0,12"/>
+
+                <Label Content="Deepgram API Key" Margin="0,0,0,4"/>
+                <TextBox x:Name="DeepgramApiKeyBox" 
+                         Margin="0,0,0,16"/>
+
+                <TextBlock Text="Transcription Provider" 
+                           FontSize="16" 
+                           FontWeight="SemiBold" 
+                           Foreground="{StaticResource TextBrush}"
+                           Margin="0,8,0,12"/>
+
+                <ComboBox x:Name="ProviderCombo" Margin="0,0,0,16">
+                    <ComboBoxItem Content="Groq (whisper-large-v3-turbo)" Tag="groq"/>
+                    <ComboBoxItem Content="Deepgram (nova-3)" Tag="deepgram"/>
+                </ComboBox>
+
+                <TextBlock Text="Hotkey Mode" 
+                           FontSize="16" 
+                           FontWeight="SemiBold" 
+                           Foreground="{StaticResource TextBrush}"
+                           Margin="0,8,0,12"/>
+
+                <ComboBox x:Name="HotkeyModeCombo" Margin="0,0,0,16">
+                    <ComboBoxItem Content="Hold to Record" Tag="hold"/>
+                    <ComboBoxItem Content="Tap to Toggle" Tag="toggle"/>
+                </ComboBox>
+
+                <TextBlock Text="Language" 
+                           FontSize="16" 
+                           FontWeight="SemiBold" 
+                           Foreground="{StaticResource TextBrush}"
+                           Margin="0,8,0,12"/>
+
+                <ComboBox x:Name="LanguageCombo" Margin="0,0,0,24">
+                    <ComboBoxItem Content="English" Tag="en"/>
+                    <ComboBoxItem Content="Spanish" Tag="es"/>
+                    <ComboBoxItem Content="French" Tag="fr"/>
+                    <ComboBoxItem Content="German" Tag="de"/>
+                    <ComboBoxItem Content="Italian" Tag="it"/>
+                    <ComboBoxItem Content="Portuguese" Tag="pt"/>
+                    <ComboBoxItem Content="Japanese" Tag="ja"/>
+                    <ComboBoxItem Content="Korean" Tag="ko"/>
+                    <ComboBoxItem Content="Chinese" Tag="zh"/>
+                    <ComboBoxItem Content="Hindi" Tag="hi"/>
+                </ComboBox>
+
+                <Button Content="Save Settings" 
+                        Click="SaveSettings_Click"
+                        Margin="0,0,0,12"/>
+
+                <TextBlock Text="Hotkey: Right Alt" 
+                           Foreground="{StaticResource TextMutedBrush}"
+                           HorizontalAlignment="Center"
+                           Margin="0,8,0,0"/>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>
