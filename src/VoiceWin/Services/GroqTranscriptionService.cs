@@ -24,7 +24,8 @@ public class GroqTranscriptionService
             audioContent.Headers.ContentType = new MediaTypeHeaderValue("audio/wav");
             content.Add(audioContent, "file", "recording.wav");
             content.Add(new StringContent(model), "model");
-            content.Add(new StringContent(language), "language");
+            if (language != "multi")
+                content.Add(new StringContent(language), "language");
             content.Add(new StringContent("json"), "response_format");
 
             using var request = new HttpRequestMessage(HttpMethod.Post, API_URL);
