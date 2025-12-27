@@ -59,8 +59,10 @@ public class TextPasteService
     {
         foreach (var text in _pasteQueue.GetConsumingEnumerable())
         {
-            _inputSimulator.Keyboard.TextEntry(text);
+            SetClipboardText(text);
             Thread.Sleep(50);
+            _inputSimulator.Keyboard.ModifiedKeyStroke(VirtualKeyCode.CONTROL, VirtualKeyCode.VK_V);
+            Thread.Sleep(150);
         }
     }
 
