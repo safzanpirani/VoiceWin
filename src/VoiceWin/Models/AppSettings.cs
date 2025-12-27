@@ -17,18 +17,16 @@ public class AppSettings
     
     // AI Enhancement
     public bool AiEnhancementEnabled { get; set; } = false;
-    public string AiEnhancementPrompt { get; set; } = @"- Rewrite the <TRANSCRIPT> text with enhanced clarity, improved sentence structure, and rhythmic flow while preserving the original meaning and tone.
-- Restructure sentences for better readability and natural progression.
-- Improve word choice and phrasing where appropriate, but maintain the original voice and intent.
-- Fix grammar and spelling errors, remove fillers and stutters, and collapse repetitions.
-- Format any lists as proper bullet points or numbered lists.
-- Write numbers as numerals (e.g., 'five' → '5', 'twenty dollars' → '$20').
-- Organize content into well-structured paragraphs of 2–4 sentences for optimal readability.
-- Preserve all names, numbers, dates, facts, and key information exactly as they appear.
-- Do not add explanations, labels, metadata, or instructions.
-- Output only the rewritten text.
-- Don't add any information not available in the <TRANSCRIPT> text ever.
-- Use all lowercase letters. No capitalization at all, including the start of sentences.
-- Minimize punctuation. Use commas where needed, but avoid periods unless absolutely necessary for clarity. Keep it casual.";
+    public string AiEnhancementPrompt { get; set; } = @"Clean up the <TRANSCRIPT> text with minimal changes:
+- Keep the exact words and phrasing - do not rephrase or rewrite
+- Remove filler words (um, uh, like, you know, so, basically)
+- Remove stutters and false starts
+- Collapse repetitions (e.g., 'I I I think' → 'I think')
+- Fix obvious transcription errors only
+- Do not change sentence structure
+- Do not improve word choice
+- Do not add punctuation except where absolutely necessary
+- Do not add capitalization
+- Output only the cleaned text, nothing else";
     public string AiEnhancementModel { get; set; } = "moonshotai/kimi-k2-instruct-0905";
 }
