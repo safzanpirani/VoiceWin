@@ -1,40 +1,41 @@
 using System.IO;
+using System.Reflection;
 using NAudio.Wave;
 
 namespace VoiceWin.Services;
 
 public class SoundService : IDisposable
 {
-    private readonly string _startSoundPath;
-    private readonly string _endSoundPath;
-
-    public SoundService()
-    {
-        var baseDir = AppContext.BaseDirectory;
-        _startSoundPath = Path.Combine(baseDir, "Assets", "sound_start.mp3");
-        _endSoundPath = Path.Combine(baseDir, "Assets", "sound_end.mp3");
-    }
+    private const string StartSoundResource = "VoiceWin.Assets.sound_start.mp3";
+    private const string EndSoundResource = "VoiceWin.Assets.sound_end.mp3";
 
     public void PlayStartSound()
     {
-        PlaySound(_startSoundPath);
+        PlayEmbeddedSound(StartSoundResource);
     }
 
     public void PlayEndSound()
     {
-        PlaySound(_endSoundPath);
+        PlayEmbeddedSound(EndSoundResource);
     }
 
-    private void PlaySound(string path)
+    private void PlayEmbeddedSound(string resourceName)
     {
-        if (!File.Exists(path))
-            return;
-
         Task.Run(() =>
         {
             try
             {
-                using var audioFile = new AudioFileReader(path);
+                var assembly = Assembly.GetExecutingAssembly();
+                using var stream = assembly.GetManifestResourceStream(resourceName);
+                if (stream == null)
+                    return;
+
+                // Copy to MemoryStream since NAudio needs seekable stream
+                using var memoryStream = new MemoryStream();
+                stream.CopyTo(memoryStream);
+                memoryStream.Position = 0;
+
+                using var audioFile = new Mp3FileReader(memoryStream);
                 using var outputDevice = new WaveOutEvent();
                 outputDevice.Init(audioFile);
                 outputDevice.Play();

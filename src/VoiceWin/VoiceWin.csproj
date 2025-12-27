@@ -24,12 +24,8 @@
 
   <ItemGroup>
     <Resource Include="Assets\icon.ico" />
-    <Content Include="Assets\sound_start.mp3">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Assets\sound_end.mp3">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <EmbeddedResource Include="Assets\sound_start.mp3" />
+    <EmbeddedResource Include="Assets\sound_end.mp3" />
   </ItemGroup>
 
 </Project>
