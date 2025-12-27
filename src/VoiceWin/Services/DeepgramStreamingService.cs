@@ -26,19 +26,33 @@ public class DeepgramStreamingService : IDisposable
             _cts = new CancellationTokenSource();
             _webSocket = new ClientWebSocket();
             _webSocket.Options.SetRequestHeader("Authorization", $"Token {apiKey}");
+            _webSocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(5);
 
-            var uri = new Uri($"wss://api.deepgram.com/v1/listen?model={model}&language={language}&encoding=linear16&sample_rate=16000&channels=1&punctuate=true&interim_results=false&utterance_end_ms=1000");
+            var uri = new Uri($"wss://api.deepgram.com/v1/listen?model={model}&language={language}&encoding=linear16&sample_rate=16000&channels=1&punctuate=true&smart_format=true");
 
-            await _webSocket.ConnectAsync(uri, _cts.Token);
+            using var connectCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, connectCts.Token);
+            
+            await _webSocket.ConnectAsync(uri, linkedCts.Token);
             _isConnected = true;
 
             _receiveTask = Task.Run(ReceiveLoop);
 
             return true;
         }
+        catch (OperationCanceledException)
+        {
+            ErrorOccurred?.Invoke(this, "Connection timed out");
+            return false;
+        }
+        catch (WebSocketException wsEx)
+        {
+            ErrorOccurred?.Invoke(this, $"WebSocket error: {wsEx.Message} (Code: {wsEx.WebSocketErrorCode})");
+            return false;
+        }
         catch (Exception ex)
         {
-            ErrorOccurred?.Invoke(this, $"Connection failed: {ex.Message}");
+            ErrorOccurred?.Invoke(this, $"Connection failed: {ex.GetType().Name}: {ex.Message}");
             return false;
         }
     }

@@ -57,7 +57,7 @@ public class GroqLlmService
             }
 
             var result = JsonSerializer.Deserialize<ChatCompletionResponse>(responseBody, _jsonOptions);
-            var enhancedText = result?.Choices?.FirstOrDefault()?.Message?.Content?.Trim() ?? "";
+            var enhancedText = (result?.Choices?.FirstOrDefault()?.Message?.Content?.Trim() ?? "") + " ";
 
             return new LlmResult
             {

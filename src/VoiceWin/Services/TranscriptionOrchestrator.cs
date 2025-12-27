@@ -77,6 +77,9 @@ public class TranscriptionOrchestrator : IDisposable
         var settings = _settingsService.Settings;
         
         StatusChanged?.Invoke(this, "Connecting...");
+
+        string? connectionError = null;
+        _streamingService.ErrorOccurred += (s, err) => connectionError = err;
         
         var connected = await _streamingService.ConnectAsync(
             settings.DeepgramApiKey!,
@@ -85,7 +88,7 @@ public class TranscriptionOrchestrator : IDisposable
 
         if (!connected)
         {
-            StatusChanged?.Invoke(this, "Failed to connect to Deepgram");
+            StatusChanged?.Invoke(this, connectionError ?? "Failed to connect to Deepgram");
             return;
         }
 

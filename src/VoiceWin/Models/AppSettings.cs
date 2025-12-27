@@ -28,6 +28,7 @@ public class AppSettings
 - Use all lowercase letters, no capitalization at all
 - Minimize punctuation, use commas sparingly, avoid periods unless absolutely necessary
 - Keep it casual
+- IMPORTANT: Always add a single trailing space at the end of your output
 - Output only the cleaned text, nothing else";
     public string AiEnhancementModel { get; set; } = "moonshotai/kimi-k2-instruct-0905";
 }

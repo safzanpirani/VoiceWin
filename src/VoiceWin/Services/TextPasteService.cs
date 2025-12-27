@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using WindowsInput;
 using WindowsInput.Native;
@@ -7,6 +8,8 @@ namespace VoiceWin.Services;
 public class TextPasteService
 {
     private readonly InputSimulator _inputSimulator;
+    private readonly BlockingCollection<string> _pasteQueue = new();
+    private readonly Thread _pasteThread;
 
     [DllImport("user32.dll")]
     private static extern bool OpenClipboard(IntPtr hWndNewOwner);
@@ -35,6 +38,12 @@ public class TextPasteService
     public TextPasteService()
     {
         _inputSimulator = new InputSimulator();
+        
+        // Single dedicated STA thread for all paste operations - ensures ordering
+        _pasteThread = new Thread(PasteWorker);
+        _pasteThread.SetApartmentState(ApartmentState.STA);
+        _pasteThread.IsBackground = true;
+        _pasteThread.Start();
     }
 
     public void PasteText(string text)
@@ -42,16 +51,17 @@ public class TextPasteService
         if (string.IsNullOrEmpty(text))
             return;
 
-        var textWithSpace = text.TrimEnd() + " ";
+        var finalText = text.EndsWith(" ") ? text : text + " ";
+        _pasteQueue.Add(finalText);
+    }
 
-        Thread thread = new(() =>
+    private void PasteWorker()
+    {
+        foreach (var text in _pasteQueue.GetConsumingEnumerable())
         {
-            SetClipboardText(textWithSpace);
-            Thread.Sleep(30);
-            _inputSimulator.Keyboard.ModifiedKeyStroke(VirtualKeyCode.CONTROL, VirtualKeyCode.VK_V);
-        });
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
+            _inputSimulator.Keyboard.TextEntry(text);
+            Thread.Sleep(50);
+        }
     }
 
     private void SetClipboardText(string text)
