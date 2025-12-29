@@ -17,6 +17,7 @@ public class TranscriptionOrchestrator : IDisposable
 
     private bool _isProcessing;
     private bool _isStreaming;
+    private bool _isAutoStopping;
     private DateTime _streamingStartTime;
     private DateTime _lastSpeechTime;
 
@@ -25,6 +26,7 @@ public class TranscriptionOrchestrator : IDisposable
     public event EventHandler<TranscriptionResult>? TranscriptionCompleted;
     public event EventHandler<string>? StatusChanged;
     public event EventHandler<float>? AudioLevelChanged;
+    public event EventHandler<bool>? SpeechDetected;
 
     public bool IsRecording => _audioService.IsRecording;
 
@@ -123,32 +125,53 @@ public class TranscriptionOrchestrator : IDisposable
         float level = CalculateAudioLevel(e.Buffer, e.BytesRecorded);
         AudioLevelChanged?.Invoke(this, level);
 
+        bool isSpeaking = level > 0.05f;
+
         if (_isStreaming && _streamingService.IsConnected)
         {
             _streamingService.SendAudio(e.Buffer, e.BytesRecorded);
             
             var settings = _settingsService.Settings;
-            if (settings.VadEnabled && level > 0.05f)
+            if (settings.VadEnabled && isSpeaking)
             {
                 _lastSpeechTime = DateTime.UtcNow;
             }
 
-            var silenceDuration = DateTime.UtcNow - _lastSpeechTime;
-            if (settings.VadEnabled && 
-                settings.VadStreamingSilenceTimeoutSeconds > 0 &&
-                silenceDuration.TotalSeconds >= settings.VadStreamingSilenceTimeoutSeconds)
+            if (!_isAutoStopping && settings.VadEnabled && settings.VadStreamingSilenceTimeoutSeconds > 0)
             {
-                Task.Run(() => AutoStopStreamingDueToSilence());
+                var silenceDuration = DateTime.UtcNow - _lastSpeechTime;
+                if (silenceDuration.TotalSeconds >= settings.VadStreamingSilenceTimeoutSeconds)
+                {
+                    _isAutoStopping = true;
+                    Task.Run(AutoStopStreamingDueToSilence);
+                }
             }
+        }
+        else if (_audioService.IsRecording && !_isStreaming)
+        {
+            SpeechDetected?.Invoke(this, isSpeaking);
         }
     }
 
-    private void AutoStopStreamingDueToSilence()
+    private async Task AutoStopStreamingDueToSilence()
     {
-        if (!_isStreaming) return;
-        
-        StatusChanged?.Invoke(this, "Auto-stopped (silence timeout)");
-        StopStreamingRecording();
+        try
+        {
+            if (!_isStreaming) return;
+            
+            StatusChanged?.Invoke(this, "Auto-stopped (silence timeout)");
+            
+            _audioService.StopRecording();
+            await _streamingService.CloseAsync();
+            
+            _isStreaming = false;
+            RecordingStopped?.Invoke(this, EventArgs.Empty);
+        }
+        catch { }
+        finally
+        {
+            _isAutoStopping = false;
+        }
     }
 
     private static float CalculateAudioLevel(byte[] buffer, int bytesRecorded)

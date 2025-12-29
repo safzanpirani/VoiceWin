@@ -126,6 +126,14 @@ public partial class MainWindow : Window
         {
             _statusOverlay.UpdateAudioLevel(level);
         };
+
+        _app.Orchestrator.SpeechDetected += (s, isSpeaking) =>
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                _statusOverlay.UpdateStatus(isSpeaking ? "Recording" : "Listening");
+            });
+        };
     }
 
     private static bool IsTerminalStatus(string status)
