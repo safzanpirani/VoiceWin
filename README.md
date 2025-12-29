@@ -23,7 +23,10 @@
 - **Tap Right Alt** to toggle recording (configurable)
 - **Hybrid mode** — hold for quick recordings, tap to toggle for longer ones
 - **Real-time Streaming** — see transcriptions appear as you speak (Deepgram)
+- **Status Overlay** — animated waveform bars with REC/LIVE indicator, shows Recording/Listening feedback
+- **Voice Activity Detection** — automatically trims silence, auto-stops streaming after extended silence
 - **AI Enhancement** — polish transcriptions with LLM-powered rewriting
+- **20+ Languages** — supports English, Spanish, French, German, Japanese, Chinese, and more
 - **Sound Feedback** — audio cues when recording starts/stops
 - **Tray Icon Status** — visual indicator shows recording (red), processing (orange), or ready (green)
 - Supports **Groq Whisper API** (fast, free tier available)
@@ -62,6 +65,37 @@
 3. Release **Right Alt** to stop and transcribe
 4. Text is automatically pasted into the focused text field
 
+## Status Overlay
+
+A minimalist overlay appears during recording:
+
+- **Animated waveform** — 5 bars that react to your microphone audio level
+- **REC indicator** (red) — shown during batch recording mode
+- **LIVE indicator** (green) — shown during streaming mode
+- **Recording/Listening** — real-time feedback showing when speech is detected
+- **Configurable position** — top or bottom of screen
+
+The overlay automatically hides after transcription completes.
+
+## Voice Activity Detection (VAD)
+
+Powered by Silero VAD for intelligent silence handling:
+
+### Batch Mode
+- Automatically trims silence from the beginning, middle, and end of recordings
+- Reduces API costs by sending only speech segments
+- Shows "No speech detected" if recording contains only silence
+
+### Streaming Mode
+- Auto-stops recording after configurable silence timeout (default: 60 seconds)
+- Prevents overnight API charges if you forget to stop recording
+- Configurable in settings
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| VAD Enabled | On | Toggle silence detection |
+| Silence Timeout | 60s | Auto-stop streaming after this much silence |
+
 ## Hotkey Modes
 
 | Mode | Description |
@@ -81,6 +115,23 @@ Transcribes in real-time as you speak — text appears immediately. Best used wi
 > **Note:** There's a ~1 second delay while connecting to the Deepgram WebSocket. The sound plays once connected — wait for it before speaking.
 
 > **Note:** Some apps (terminals, code editors) may strip trailing whitespace between transcript chunks. If words run together, try non-streaming mode or adjust your app's settings.
+
+## Language Support
+
+VoiceWin supports 20+ languages with auto-detection:
+
+| Language | Code | Language | Code |
+|----------|------|----------|------|
+| Auto-detect (Multi) | `multi` | Japanese | `ja` |
+| English | `en` | Korean | `ko` |
+| Spanish | `es` | Russian | `ru` |
+| French | `fr` | Portuguese | `pt` |
+| German | `de` | Italian | `it` |
+| Chinese | `zh` | Dutch | `nl` |
+| Hindi | `hi` | Polish | `pl` |
+| Arabic | `ar` | Turkish | `tr` |
+
+Select your preferred language in settings, or use "Auto-detect" for multilingual transcription.
 
 ## AI Enhancement
 
@@ -108,6 +159,17 @@ Settings are stored at:
 %APPDATA%\VoiceWin\settings.json
 ```
 
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Transcription Provider | Groq | Groq, Deepgram, or Deepgram Streaming |
+| Hotkey Mode | Hold | Hold, Toggle, or Hybrid |
+| Language | Auto-detect | 20+ languages supported |
+| Overlay Position | Bottom | Top or Bottom of screen |
+| VAD Enabled | On | Silence detection and trimming |
+| VAD Silence Timeout | 60s | Auto-stop streaming after silence |
+| AI Enhancement | Off | LLM-powered text cleanup |
+| Sound Feedback | On | Audio cues for recording |
+
 ## Build from Source
 
 Requires [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0).
@@ -118,10 +180,12 @@ dotnet restore
 dotnet build src/VoiceWin -c Release
 
 # Self-contained single-file EXE
-dotnet publish src/VoiceWin -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+dotnet publish src/VoiceWin -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
 ```
 
-Output: `src/VoiceWin/bin/Release/net8.0-windows/win-x64/publish/VoiceWin.exe` (~156MB)
+Output: `publish/VoiceWin.exe` (~560MB due to bundled ONNX Runtime for VAD)
+
+> **Note:** The large file size is due to ONNX Runtime CUDA libraries bundled for Silero VAD. The app works without GPU acceleration.
 
 ## License
 
