@@ -12,7 +12,7 @@ dotnet restore && dotnet build src/VoiceWin -c Debug
 dotnet build src/VoiceWin -c Release
 
 # Self-contained single-file EXE (~156MB, no .NET runtime required)
-dotnet publish src/VoiceWin -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+dotnet publish src/VoiceWin -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
 ```
 
 **No test framework configured.** Validate changes manually:

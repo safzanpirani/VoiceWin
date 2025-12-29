@@ -32,4 +32,10 @@ public class AppSettings
 - IMPORTANT: Always add a single trailing space at the end of your output
 - Output only the cleaned text, nothing else";
     public string AiEnhancementModel { get; set; } = "moonshotai/kimi-k2-instruct-0905";
+
+    // Voice Activity Detection
+    public bool VadEnabled { get; set; } = true;
+    public float VadThreshold { get; set; } = 0.5f;
+    public int VadMinSilenceDurationMs { get; set; } = 500;
+    public int VadStreamingSilenceTimeoutSeconds { get; set; } = 60;
 }

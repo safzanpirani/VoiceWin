@@ -39,6 +39,9 @@ public partial class MainWindow : Window
         AiEnhancementCheckBox.IsChecked = settings.AiEnhancementEnabled;
         AiEnhancementPromptBox.Text = settings.AiEnhancementPrompt;
 
+        VadEnabledCheckBox.IsChecked = settings.VadEnabled;
+        VadSilenceTimeoutBox.Text = settings.VadStreamingSilenceTimeoutSeconds.ToString();
+
         _statusOverlay.SetPosition(settings.OverlayPosition);
     }
 
@@ -132,7 +135,9 @@ public partial class MainWindow : Window
                status.Contains("Error") ||
                status.Contains("too short") ||
                status.Contains("No API") ||
-               status.Contains("No valid");
+               status.Contains("No valid") ||
+               status.Contains("No speech") ||
+               status.Contains("Auto-stopped");
     }
 
     private void SaveSettings_Click(object sender, RoutedEventArgs e)
@@ -147,6 +152,11 @@ public partial class MainWindow : Window
             settings.Language = GetSelectedTag(LanguageCombo);
             settings.AiEnhancementEnabled = AiEnhancementCheckBox.IsChecked ?? false;
             settings.AiEnhancementPrompt = AiEnhancementPromptBox.Text;
+            settings.VadEnabled = VadEnabledCheckBox.IsChecked ?? true;
+            if (int.TryParse(VadSilenceTimeoutBox.Text, out int timeout))
+            {
+                settings.VadStreamingSilenceTimeoutSeconds = timeout;
+            }
         });
 
         _app.Orchestrator.UpdateHotkeySettings();

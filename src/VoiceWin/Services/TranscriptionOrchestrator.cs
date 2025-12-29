@@ -13,10 +13,12 @@ public class TranscriptionOrchestrator : IDisposable
     private readonly GlobalHotkeyService _hotkeyService;
     private readonly SettingsService _settingsService;
     private readonly SoundService _soundService;
+    private readonly VadService _vadService;
 
     private bool _isProcessing;
     private bool _isStreaming;
     private DateTime _streamingStartTime;
+    private DateTime _lastSpeechTime;
 
     public event EventHandler? RecordingStarted;
     public event EventHandler? RecordingStopped;
@@ -37,6 +39,9 @@ public class TranscriptionOrchestrator : IDisposable
         _pasteService = new TextPasteService();
         _hotkeyService = new GlobalHotkeyService();
         _soundService = new SoundService();
+        _vadService = new VadService();
+
+        _vadService.Initialize();
 
         _hotkeyService.TargetVirtualKey = _settingsService.Settings.HotkeyVirtualKey;
         _hotkeyService.Mode = _settingsService.Settings.HotkeyMode;
@@ -107,6 +112,7 @@ public class TranscriptionOrchestrator : IDisposable
 
         _isStreaming = true;
         _streamingStartTime = DateTime.UtcNow;
+        _lastSpeechTime = DateTime.UtcNow;
         StatusChanged?.Invoke(this, "Recording (streaming)...");
         _audioService.StartRecording();
         RecordingStarted?.Invoke(this, EventArgs.Empty);
@@ -114,13 +120,35 @@ public class TranscriptionOrchestrator : IDisposable
 
     private void OnAudioChunkAvailable(object? sender, AudioChunkEventArgs e)
     {
+        float level = CalculateAudioLevel(e.Buffer, e.BytesRecorded);
+        AudioLevelChanged?.Invoke(this, level);
+
         if (_isStreaming && _streamingService.IsConnected)
         {
             _streamingService.SendAudio(e.Buffer, e.BytesRecorded);
-        }
+            
+            var settings = _settingsService.Settings;
+            if (settings.VadEnabled && level > 0.05f)
+            {
+                _lastSpeechTime = DateTime.UtcNow;
+            }
 
-        float level = CalculateAudioLevel(e.Buffer, e.BytesRecorded);
-        AudioLevelChanged?.Invoke(this, level);
+            var silenceDuration = DateTime.UtcNow - _lastSpeechTime;
+            if (settings.VadEnabled && 
+                settings.VadStreamingSilenceTimeoutSeconds > 0 &&
+                silenceDuration.TotalSeconds >= settings.VadStreamingSilenceTimeoutSeconds)
+            {
+                Task.Run(() => AutoStopStreamingDueToSilence());
+            }
+        }
+    }
+
+    private void AutoStopStreamingDueToSilence()
+    {
+        if (!_isStreaming) return;
+        
+        StatusChanged?.Invoke(this, "Auto-stopped (silence timeout)");
+        StopStreamingRecording();
     }
 
     private static float CalculateAudioLevel(byte[] buffer, int bytesRecorded)
@@ -207,12 +235,29 @@ public class TranscriptionOrchestrator : IDisposable
             }
 
             var settings = _settingsService.Settings;
+            var processedAudio = audioData;
+
+            if (settings.VadEnabled && _vadService.IsInitialized)
+            {
+                StatusChanged?.Invoke(this, "Detecting speech...");
+                processedAudio = _vadService.TrimSilence(
+                    audioData,
+                    settings.VadThreshold,
+                    settings.VadMinSilenceDurationMs);
+
+                if (processedAudio.Length == 0)
+                {
+                    StatusChanged?.Invoke(this, "No speech detected");
+                    return;
+                }
+            }
+
             TranscriptionResult result;
 
             if (settings.TranscriptionProvider == "deepgram" && !string.IsNullOrEmpty(settings.DeepgramApiKey))
             {
                 result = await _deepgramService.TranscribeAsync(
-                    audioData,
+                    processedAudio,
                     settings.DeepgramApiKey,
                     settings.DeepgramModel,
                     settings.Language);
@@ -220,7 +265,7 @@ public class TranscriptionOrchestrator : IDisposable
             else if (!string.IsNullOrEmpty(settings.GroqApiKey))
             {
                 result = await _groqService.TranscribeAsync(
-                    audioData,
+                    processedAudio,
                     settings.GroqApiKey,
                     settings.GroqModel,
                     settings.Language);
@@ -288,5 +333,6 @@ public class TranscriptionOrchestrator : IDisposable
         _audioService.Dispose();
         _streamingService.Dispose();
         _soundService.Dispose();
+        _vadService.Dispose();
     }
 }

@@ -12,7 +12,6 @@ public partial class StatusOverlayWindow : Window
     private readonly double[] _targetHeights = new double[5];
     private bool _isAnimating;
     private double _audioLevel;
-    private int _blinkCounter;
     private bool _isStreaming;
     private double _blinkOpacity = 1.0;
     private bool _blinkFadingOut = true;
