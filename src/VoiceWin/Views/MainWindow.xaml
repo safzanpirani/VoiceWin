@@ -88,11 +88,33 @@
                     <ComboBoxItem Content="Deepgram Streaming (nova-3)" Tag="deepgram-streaming"/>
                 </ComboBox>
 
-                <TextBlock Text="Hotkey Mode" 
+                <TextBlock Text="Hotkey" 
                            FontSize="16" 
                            FontWeight="SemiBold" 
                            Foreground="{StaticResource TextBrush}"
                            Margin="0,8,0,12"/>
+
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="HotkeyDisplayBox" 
+                             IsReadOnly="True"
+                             Text="Right Alt"
+                             Margin="0,0,8,0"/>
+                    <Button x:Name="RecordHotkeyButton"
+                            Grid.Column="1"
+                            Content="Record"
+                            Width="80"
+                            Click="RecordHotkey_Click"/>
+                </Grid>
+
+                <TextBlock Text="Hotkey Mode" 
+                           FontSize="16" 
+                           FontWeight="SemiBold" 
+                           Foreground="{StaticResource TextBrush}"
+                           Margin="0,0,0,12"/>
 
                 <ComboBox x:Name="HotkeyModeCombo" Margin="0,0,0,16">
                     <ComboBoxItem Content="Hold to Record" Tag="hold"/>
@@ -174,11 +196,6 @@
                 <Button Content="Save Settings" 
                         Click="SaveSettings_Click"
                         Margin="0,0,0,12"/>
-
-                <TextBlock Text="Hotkey: Right Alt" 
-                           Foreground="{StaticResource TextMutedBrush}"
-                           HorizontalAlignment="Center"
-                           Margin="0,8,0,0"/>
             </StackPanel>
         </ScrollViewer>
     </Grid>

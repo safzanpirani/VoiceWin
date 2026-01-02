@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using VoiceWin.Services;
 
@@ -10,6 +11,8 @@ public partial class MainWindow : Window
     private readonly App _app;
     private readonly TrayIconService _trayIconService;
     private readonly StatusOverlayWindow _statusOverlay;
+    private bool _isRecordingHotkey;
+    private int _pendingHotkeyVirtualKey;
 
     public MainWindow()
     {
@@ -41,6 +44,9 @@ public partial class MainWindow : Window
 
         VadEnabledCheckBox.IsChecked = settings.VadEnabled;
         VadSilenceTimeoutBox.Text = settings.VadStreamingSilenceTimeoutSeconds.ToString();
+
+        _pendingHotkeyVirtualKey = settings.HotkeyVirtualKey;
+        HotkeyDisplayBox.Text = GetKeyName(settings.HotkeyVirtualKey);
 
         _statusOverlay.SetPosition(settings.OverlayPosition);
     }
@@ -165,6 +171,7 @@ public partial class MainWindow : Window
             {
                 settings.VadStreamingSilenceTimeoutSeconds = timeout;
             }
+            settings.HotkeyVirtualKey = _pendingHotkeyVirtualKey;
         });
 
         _app.Orchestrator.UpdateHotkeySettings();
@@ -205,5 +212,104 @@ public partial class MainWindow : Window
     {
         e.Cancel = true;
         Hide();
+    }
+
+    private void RecordHotkey_Click(object sender, RoutedEventArgs e)
+    {
+        if (_isRecordingHotkey)
+        {
+            _isRecordingHotkey = false;
+            RecordHotkeyButton.Content = "Record";
+            HotkeyDisplayBox.Text = GetKeyName(_pendingHotkeyVirtualKey);
+            return;
+        }
+
+        _isRecordingHotkey = true;
+        RecordHotkeyButton.Content = "Cancel";
+        HotkeyDisplayBox.Text = "Press any key...";
+        HotkeyDisplayBox.Focus();
+    }
+
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    {
+        base.OnPreviewKeyDown(e);
+
+        if (!_isRecordingHotkey) return;
+
+        e.Handled = true;
+
+        int vkCode = KeyInterop.VirtualKeyFromKey(e.Key == Key.System ? e.SystemKey : e.Key);
+        
+        if (vkCode == 0) return;
+
+        _pendingHotkeyVirtualKey = vkCode;
+        HotkeyDisplayBox.Text = GetKeyName(vkCode);
+        _isRecordingHotkey = false;
+        RecordHotkeyButton.Content = "Record";
+    }
+
+    private static string GetKeyName(int virtualKey)
+    {
+        return virtualKey switch
+        {
+            8 => "Backspace",
+            9 => "Tab",
+            13 => "Enter",
+            16 => "Shift",
+            17 => "Ctrl",
+            18 => "Alt",
+            19 => "Pause",
+            20 => "Caps Lock",
+            27 => "Escape",
+            32 => "Space",
+            33 => "Page Up",
+            34 => "Page Down",
+            35 => "End",
+            36 => "Home",
+            37 => "Left Arrow",
+            38 => "Up Arrow",
+            39 => "Right Arrow",
+            40 => "Down Arrow",
+            45 => "Insert",
+            46 => "Delete",
+            91 => "Left Win",
+            92 => "Right Win",
+            93 => "Menu",
+            112 => "F1",
+            113 => "F2",
+            114 => "F3",
+            115 => "F4",
+            116 => "F5",
+            117 => "F6",
+            118 => "F7",
+            119 => "F8",
+            120 => "F9",
+            121 => "F10",
+            122 => "F11",
+            123 => "F12",
+            144 => "Num Lock",
+            145 => "Scroll Lock",
+            160 => "Left Shift",
+            161 => "Right Shift",
+            162 => "Left Ctrl",
+            163 => "Right Ctrl",
+            164 => "Left Alt",
+            165 => "Right Alt",
+            186 => ";",
+            187 => "=",
+            188 => ",",
+            189 => "-",
+            190 => ".",
+            191 => "/",
+            192 => "`",
+            219 => "[",
+            220 => "\\",
+            221 => "]",
+            222 => "'",
+            _ when virtualKey >= 48 && virtualKey <= 57 => ((char)virtualKey).ToString(),
+            _ when virtualKey >= 65 && virtualKey <= 90 => ((char)virtualKey).ToString(),
+            _ when virtualKey >= 96 && virtualKey <= 105 => $"Numpad {virtualKey - 96}",
+            _ => $"Key {virtualKey}"
+        };
     }
 }
