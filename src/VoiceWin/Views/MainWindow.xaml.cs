@@ -17,6 +17,33 @@ public partial class MainWindow : Window
     private int _pendingHotkeyModifiers;
     private int _recordingModifierMask;
 
+    private const int ModifierCtrl = 1;
+    private const int ModifierAlt = 2;
+    private const int ModifierShift = 4;
+    private const int ModifierWin = 8;
+    private const int ModifierMouseLeft = 16;
+    private const int ModifierMouseRight = 32;
+    private const int ModifierMouseMiddle = 64;
+    private const int ModifierMouseX1 = 128;
+    private const int ModifierMouseX2 = 256;
+
+    private const int VK_SHIFT = 16;
+    private const int VK_CONTROL = 17;
+    private const int VK_MENU = 18;
+    private const int VK_LSHIFT = 0xA0;
+    private const int VK_RSHIFT = 0xA1;
+    private const int VK_LCONTROL = 0xA2;
+    private const int VK_RCONTROL = 0xA3;
+    private const int VK_LMENU = 0xA4;
+    private const int VK_RMENU = 0xA5;
+    private const int VK_LWIN = 0x5B;
+    private const int VK_RWIN = 0x5C;
+    private const int VK_LBUTTON = 0x01;
+    private const int VK_RBUTTON = 0x02;
+    private const int VK_MBUTTON = 0x04;
+    private const int VK_XBUTTON1 = 0x05;
+    private const int VK_XBUTTON2 = 0x06;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -237,6 +264,9 @@ public partial class MainWindow : Window
         HotkeyDisplayBox.Focus();
     }
 
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
+
     protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
         base.OnPreviewKeyDown(e);
@@ -388,17 +418,16 @@ public partial class MainWindow : Window
     private static int GetCurrentModifierMask()
     {
         int modifiers = 0;
-        ModifierKeys keyboardModifiers = Keyboard.Modifiers;
-        if (keyboardModifiers.HasFlag(ModifierKeys.Control)) modifiers |= HotkeyConstants.ModifierCtrl;
-        if (keyboardModifiers.HasFlag(ModifierKeys.Alt)) modifiers |= HotkeyConstants.ModifierAlt;
-        if (keyboardModifiers.HasFlag(ModifierKeys.Shift)) modifiers |= HotkeyConstants.ModifierShift;
-        if (keyboardModifiers.HasFlag(ModifierKeys.Windows)) modifiers |= HotkeyConstants.ModifierWin;
 
-        if (Mouse.LeftButton == MouseButtonState.Pressed) modifiers |= HotkeyConstants.ModifierMouseLeft;
-        if (Mouse.RightButton == MouseButtonState.Pressed) modifiers |= HotkeyConstants.ModifierMouseRight;
-        if (Mouse.MiddleButton == MouseButtonState.Pressed) modifiers |= HotkeyConstants.ModifierMouseMiddle;
-        if (Mouse.XButton1 == MouseButtonState.Pressed) modifiers |= HotkeyConstants.ModifierMouseX1;
-        if (Mouse.XButton2 == MouseButtonState.Pressed) modifiers |= HotkeyConstants.ModifierMouseX2;
+        if ((GetAsyncKeyState(VK_LCONTROL) & 0x8000) != 0 || (GetAsyncKeyState(VK_RCONTROL) & 0x8000) != 0) modifiers |= ModifierCtrl;
+        if ((GetAsyncKeyState(VK_LMENU) & 0x8000) != 0 || (GetAsyncKeyState(VK_RMENU) & 0x8000) != 0) modifiers |= ModifierAlt;
+        if ((GetAsyncKeyState(VK_LSHIFT) & 0x8000) != 0 || (GetAsyncKeyState(VK_RSHIFT) & 0x8000) != 0) modifiers |= ModifierShift;
+        if ((GetAsyncKeyState(VK_LWIN) & 0x8000) != 0 || (GetAsyncKeyState(VK_RWIN) & 0x8000) != 0) modifiers |= ModifierWin;
+        if ((GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0) modifiers |= ModifierMouseLeft;
+        if ((GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0) modifiers |= ModifierMouseRight;
+        if ((GetAsyncKeyState(VK_MBUTTON) & 0x8000) != 0) modifiers |= ModifierMouseMiddle;
+        if ((GetAsyncKeyState(VK_XBUTTON1) & 0x8000) != 0) modifiers |= ModifierMouseX1;
+        if ((GetAsyncKeyState(VK_XBUTTON2) & 0x8000) != 0) modifiers |= ModifierMouseX2;
 
         return modifiers;
     }
@@ -412,15 +441,15 @@ public partial class MainWindow : Window
     {
         return vkCode switch
         {
-            HotkeyConstants.VK_SHIFT or HotkeyConstants.VK_LSHIFT or HotkeyConstants.VK_RSHIFT => HotkeyConstants.ModifierShift,
-            HotkeyConstants.VK_CONTROL or HotkeyConstants.VK_LCONTROL or HotkeyConstants.VK_RCONTROL => HotkeyConstants.ModifierCtrl,
-            HotkeyConstants.VK_MENU or HotkeyConstants.VK_LMENU or HotkeyConstants.VK_RMENU => HotkeyConstants.ModifierAlt,
-            HotkeyConstants.VK_LWIN or HotkeyConstants.VK_RWIN => HotkeyConstants.ModifierWin,
-            HotkeyConstants.VK_LBUTTON => HotkeyConstants.ModifierMouseLeft,
-            HotkeyConstants.VK_RBUTTON => HotkeyConstants.ModifierMouseRight,
-            HotkeyConstants.VK_MBUTTON => HotkeyConstants.ModifierMouseMiddle,
-            HotkeyConstants.VK_XBUTTON1 => HotkeyConstants.ModifierMouseX1,
-            HotkeyConstants.VK_XBUTTON2 => HotkeyConstants.ModifierMouseX2,
+            VK_SHIFT or VK_LSHIFT or VK_RSHIFT => ModifierShift,
+            VK_CONTROL or VK_LCONTROL or VK_RCONTROL => ModifierCtrl,
+            VK_MENU or VK_LMENU or VK_RMENU => ModifierAlt,
+            VK_LWIN or VK_RWIN => ModifierWin,
+            VK_LBUTTON => ModifierMouseLeft,
+            VK_RBUTTON => ModifierMouseRight,
+            VK_MBUTTON => ModifierMouseMiddle,
+            VK_XBUTTON1 => ModifierMouseX1,
+            VK_XBUTTON2 => ModifierMouseX2,
             _ => 0
         };
     }
@@ -429,11 +458,11 @@ public partial class MainWindow : Window
     {
         return button switch
         {
-            MouseButton.Left => HotkeyConstants.VK_LBUTTON,
-            MouseButton.Right => HotkeyConstants.VK_RBUTTON,
-            MouseButton.Middle => HotkeyConstants.VK_MBUTTON,
-            MouseButton.XButton1 => HotkeyConstants.VK_XBUTTON1,
-            MouseButton.XButton2 => HotkeyConstants.VK_XBUTTON2,
+            MouseButton.Left => VK_LBUTTON,
+            MouseButton.Right => VK_RBUTTON,
+            MouseButton.Middle => VK_MBUTTON,
+            MouseButton.XButton1 => VK_XBUTTON1,
+            MouseButton.XButton2 => VK_XBUTTON2,
             _ => 0
         };
     }
@@ -441,15 +470,15 @@ public partial class MainWindow : Window
     private static string GetModifierString(int modifiers)
     {
         var parts = new List<string>();
-        if ((modifiers & HotkeyConstants.ModifierCtrl) != 0) parts.Add("Ctrl");
-        if ((modifiers & HotkeyConstants.ModifierAlt) != 0) parts.Add("Alt");
-        if ((modifiers & HotkeyConstants.ModifierShift) != 0) parts.Add("Shift");
-        if ((modifiers & HotkeyConstants.ModifierWin) != 0) parts.Add("Win");
-        if ((modifiers & HotkeyConstants.ModifierMouseLeft) != 0) parts.Add("Left Mouse");
-        if ((modifiers & HotkeyConstants.ModifierMouseRight) != 0) parts.Add("Right Mouse");
-        if ((modifiers & HotkeyConstants.ModifierMouseMiddle) != 0) parts.Add("Middle Mouse");
-        if ((modifiers & HotkeyConstants.ModifierMouseX1) != 0) parts.Add("Mouse X1");
-        if ((modifiers & HotkeyConstants.ModifierMouseX2) != 0) parts.Add("Mouse X2");
+        if ((modifiers & ModifierCtrl) != 0) parts.Add("Ctrl");
+        if ((modifiers & ModifierAlt) != 0) parts.Add("Alt");
+        if ((modifiers & ModifierShift) != 0) parts.Add("Shift");
+        if ((modifiers & ModifierWin) != 0) parts.Add("Win");
+        if ((modifiers & ModifierMouseLeft) != 0) parts.Add("Left Mouse");
+        if ((modifiers & ModifierMouseRight) != 0) parts.Add("Right Mouse");
+        if ((modifiers & ModifierMouseMiddle) != 0) parts.Add("Middle Mouse");
+        if ((modifiers & ModifierMouseX1) != 0) parts.Add("Mouse X1");
+        if ((modifiers & ModifierMouseX2) != 0) parts.Add("Mouse X2");
         return parts.Count > 0 ? string.Join(" + ", parts) : "";
     }
 
@@ -464,11 +493,11 @@ public partial class MainWindow : Window
     {
         return virtualKey switch
         {
-            HotkeyConstants.VK_LBUTTON => "Left Mouse",
-            HotkeyConstants.VK_RBUTTON => "Right Mouse",
-            HotkeyConstants.VK_MBUTTON => "Middle Mouse",
-            HotkeyConstants.VK_XBUTTON1 => "Mouse X1",
-            HotkeyConstants.VK_XBUTTON2 => "Mouse X2",
+            VK_LBUTTON => "Left Mouse",
+            VK_RBUTTON => "Right Mouse",
+            VK_MBUTTON => "Middle Mouse",
+            VK_XBUTTON1 => "Mouse X1",
+            VK_XBUTTON2 => "Mouse X2",
             8 => "Backspace",
             9 => "Tab",
             13 => "Enter",
