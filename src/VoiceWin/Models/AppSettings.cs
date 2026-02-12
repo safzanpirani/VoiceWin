@@ -9,7 +9,7 @@ public class AppSettings
     public string DeepgramModel { get; set; } = "nova-3";
     public string HotkeyMode { get; set; } = "hold";
     public int HotkeyVirtualKey { get; set; } = 165;
-    public int HotkeyModifiers { get; set; } = 0; // 0=None, 1=Ctrl, 2=Alt, 4=Shift, 8=Win (combinable)
+    public int HotkeyModifiers { get; set; } = 0; // 0=None, 1=Ctrl, 2=Alt, 4=Shift, 8=Win, 16=LMB, 32=RMB, 64=MMB, 128=X1, 256=X2
     public string Language { get; set; } = "multi";
     public bool PlaySoundFeedback { get; set; } = true;
     public bool ShowRecordingOverlay { get; set; } = true;
