@@ -31,6 +31,7 @@ public class GlobalHotkeyService : IDisposable
             _isTargetDown = false;
             _toggleState = false;
             _isRecording = false;
+            UpdateMousePollingState();
         }
     }
 
@@ -49,6 +50,8 @@ public class GlobalHotkeyService : IDisposable
                 _toggleState = false;
                 _isRecording = false;
             }
+
+            UpdateMousePollingState();
         }
     }
 
@@ -94,7 +97,8 @@ public class GlobalHotkeyService : IDisposable
         _eventContext = SynchronizationContext.Current;
         _keyboardHookProc = KeyboardHookCallback;
         _keyboardHookId = SetKeyboardHook(_keyboardHookProc);
-        _mouseTargetPollTimer = new Timer(OnMouseTargetPollTick, null, 0, MousePollIntervalMs);
+        _mouseTargetPollTimer = new Timer(OnMouseTargetPollTick, null, Timeout.Infinite, Timeout.Infinite);
+        UpdateMousePollingState();
     }
 
     private nint SetKeyboardHook(LowLevelKeyboardProc proc)
@@ -161,6 +165,17 @@ public class GlobalHotkeyService : IDisposable
     private static bool IsMouseVirtualKey(int virtualKey)
     {
         return virtualKey is VK_LBUTTON or VK_RBUTTON or VK_MBUTTON or VK_XBUTTON1 or VK_XBUTTON2;
+    }
+
+    private void UpdateMousePollingState()
+    {
+        if (IsEnabled && IsMouseVirtualKey(TargetVirtualKey))
+        {
+            _mouseTargetPollTimer.Change(0, MousePollIntervalMs);
+            return;
+        }
+
+        _mouseTargetPollTimer.Change(Timeout.Infinite, Timeout.Infinite);
     }
 
     private bool ShouldHandleTargetEvent(bool isDownEvent, bool isUpEvent)
