@@ -349,6 +349,11 @@ public class TranscriptionOrchestrator : IDisposable
         _hotkeyService.Mode = _settingsService.Settings.HotkeyMode;
     }
 
+    public void SetHotkeyEnabled(bool enabled)
+    {
+        _hotkeyService.IsEnabled = enabled;
+    }
+
     public void Dispose()
     {
         _hotkeyService.HotkeyPressed -= OnHotkeyPressed;

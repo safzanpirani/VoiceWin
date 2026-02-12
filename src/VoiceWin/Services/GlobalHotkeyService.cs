@@ -5,37 +5,63 @@ namespace VoiceWin.Services;
 public class GlobalHotkeyService : IDisposable
 {
     private readonly nint _keyboardHookId;
-    private readonly nint _mouseHookId;
     private readonly LowLevelKeyboardProc _keyboardHookProc;
-    private readonly LowLevelMouseProc _mouseHookProc;
+    private readonly SynchronizationContext? _eventContext;
+    private readonly Timer _mouseTargetPollTimer;
+
     private bool _isTargetDown;
     private DateTime _keyDownTime;
-    
+    private bool _isEnabled = true;
+    private int _targetVirtualKey = 165;
+
     public event EventHandler? HotkeyPressed;
     public event EventHandler? HotkeyReleased;
-    
-    public int TargetVirtualKey { get; set; } = 165;
+
+    public int TargetVirtualKey
+    {
+        get => _targetVirtualKey;
+        set
+        {
+            if (_targetVirtualKey == value)
+            {
+                return;
+            }
+
+            _targetVirtualKey = value;
+            _isTargetDown = false;
+            _toggleState = false;
+            _isRecording = false;
+        }
+    }
+
     public int TargetModifiers { get; set; } = 0;
     public string Mode { get; set; } = "hold";
-    
+    public bool IsEnabled
+    {
+        get => _isEnabled;
+        set
+        {
+            _isEnabled = value;
+
+            if (!value)
+            {
+                _isTargetDown = false;
+                _toggleState = false;
+                _isRecording = false;
+            }
+        }
+    }
+
     private bool _toggleState;
     private bool _isRecording;
     private const int HybridHoldThresholdMs = 250;
-    
+    private const int MousePollIntervalMs = 8;
+
     private const int WH_KEYBOARD_LL = 13;
-    private const int WH_MOUSE_LL = 14;
     private const int WM_KEYDOWN = 0x0100;
     private const int WM_KEYUP = 0x0101;
     private const int WM_SYSKEYDOWN = 0x0104;
     private const int WM_SYSKEYUP = 0x0105;
-    private const int WM_LBUTTONDOWN = 0x0201;
-    private const int WM_LBUTTONUP = 0x0202;
-    private const int WM_RBUTTONDOWN = 0x0204;
-    private const int WM_RBUTTONUP = 0x0205;
-    private const int WM_MBUTTONDOWN = 0x0207;
-    private const int WM_MBUTTONUP = 0x0208;
-    private const int WM_XBUTTONDOWN = 0x020B;
-    private const int WM_XBUTTONUP = 0x020C;
 
     private const int VK_LCONTROL = 0xA2;
     private const int VK_RCONTROL = 0xA3;
@@ -50,8 +76,6 @@ public class GlobalHotkeyService : IDisposable
     private const int VK_MBUTTON = 0x04;
     private const int VK_XBUTTON1 = 0x05;
     private const int VK_XBUTTON2 = 0x06;
-    private const ushort XBUTTON1 = 0x0001;
-    private const ushort XBUTTON2 = 0x0002;
 
     private const int ModifierCtrl = 1;
     private const int ModifierAlt = 2;
@@ -64,31 +88,13 @@ public class GlobalHotkeyService : IDisposable
     private const int ModifierMouseX2 = 256;
 
     private delegate nint LowLevelKeyboardProc(int nCode, nint wParam, nint lParam);
-    private delegate nint LowLevelMouseProc(int nCode, nint wParam, nint lParam);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct Point
-    {
-        public int X;
-        public int Y;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct MsllHookStruct
-    {
-        public Point Point;
-        public uint MouseData;
-        public uint Flags;
-        public uint Time;
-        public nuint DwExtraInfo;
-    }
 
     public GlobalHotkeyService()
     {
+        _eventContext = SynchronizationContext.Current;
         _keyboardHookProc = KeyboardHookCallback;
-        _mouseHookProc = MouseHookCallback;
         _keyboardHookId = SetKeyboardHook(_keyboardHookProc);
-        _mouseHookId = SetMouseHook(_mouseHookProc);
+        _mouseTargetPollTimer = new Timer(OnMouseTargetPollTick, null, 0, MousePollIntervalMs);
     }
 
     private nint SetKeyboardHook(LowLevelKeyboardProc proc)
@@ -96,13 +102,6 @@ public class GlobalHotkeyService : IDisposable
         using var curProcess = System.Diagnostics.Process.GetCurrentProcess();
         using var curModule = curProcess.MainModule!;
         return SetWindowsHookExKeyboard(WH_KEYBOARD_LL, proc, GetModuleHandle(curModule.ModuleName), 0);
-    }
-
-    private nint SetMouseHook(LowLevelMouseProc proc)
-    {
-        using var curProcess = System.Diagnostics.Process.GetCurrentProcess();
-        using var curModule = curProcess.MainModule!;
-        return SetWindowsHookExMouse(WH_MOUSE_LL, proc, GetModuleHandle(curModule.ModuleName), 0);
     }
 
     private nint KeyboardHookCallback(int nCode, nint wParam, nint lParam)
@@ -137,34 +136,40 @@ public class GlobalHotkeyService : IDisposable
         return CallNextHookEx(_keyboardHookId, nCode, wParam, lParam);
     }
 
-    private nint MouseHookCallback(int nCode, nint wParam, nint lParam)
+    private void OnMouseTargetPollTick(object? _)
     {
-        if (nCode < 0)
+        if (!IsEnabled || !IsMouseVirtualKey(TargetVirtualKey))
         {
-            return CallNextHookEx(_mouseHookId, nCode, wParam, lParam);
+            return;
         }
 
-        if (!TryGetMouseEvent(wParam, lParam, out int vkCode, out bool isMouseDownEvent, out bool isMouseUpEvent))
-        {
-            return CallNextHookEx(_mouseHookId, nCode, wParam, lParam);
-        }
+        bool isMouseTargetDown = (GetAsyncKeyState(TargetVirtualKey) & 0x8000) != 0;
 
-        if (vkCode != TargetVirtualKey)
+        if (isMouseTargetDown && !_isTargetDown)
         {
-            return CallNextHookEx(_mouseHookId, nCode, wParam, lParam);
+            if (AreModifiersPressed())
+            {
+                HandleTargetEvent(isDownEvent: true, isUpEvent: false);
+            }
         }
-
-        if (ShouldHandleTargetEvent(isMouseDownEvent, isMouseUpEvent))
+        else if (!isMouseTargetDown && _isTargetDown)
         {
-            HandleTargetEvent(isMouseDownEvent, isMouseUpEvent);
-            return (nint)1;
+            HandleTargetEvent(isDownEvent: false, isUpEvent: true);
         }
+    }
 
-        return CallNextHookEx(_mouseHookId, nCode, wParam, lParam);
+    private static bool IsMouseVirtualKey(int virtualKey)
+    {
+        return virtualKey is VK_LBUTTON or VK_RBUTTON or VK_MBUTTON or VK_XBUTTON1 or VK_XBUTTON2;
     }
 
     private bool ShouldHandleTargetEvent(bool isDownEvent, bool isUpEvent)
     {
+        if (!IsEnabled)
+        {
+            return false;
+        }
+
         if (isDownEvent)
         {
             return AreModifiersPressed();
@@ -186,12 +191,12 @@ public class GlobalHotkeyService : IDisposable
             {
                 _isTargetDown = true;
                 _keyDownTime = DateTime.UtcNow;
-                HotkeyPressed?.Invoke(this, EventArgs.Empty);
+                RaiseHotkeyPressed();
             }
             else if (isUpEvent && _isTargetDown)
             {
                 _isTargetDown = false;
-                HotkeyReleased?.Invoke(this, EventArgs.Empty);
+                RaiseHotkeyReleased();
             }
         }
         else if (Mode == "toggle")
@@ -203,11 +208,11 @@ public class GlobalHotkeyService : IDisposable
 
                 if (_toggleState)
                 {
-                    HotkeyPressed?.Invoke(this, EventArgs.Empty);
+                    RaiseHotkeyPressed();
                 }
                 else
                 {
-                    HotkeyReleased?.Invoke(this, EventArgs.Empty);
+                    RaiseHotkeyReleased();
                 }
             }
             else if (isUpEvent)
@@ -225,7 +230,7 @@ public class GlobalHotkeyService : IDisposable
                 if (!_isRecording)
                 {
                     _isRecording = true;
-                    HotkeyPressed?.Invoke(this, EventArgs.Empty);
+                    RaiseHotkeyPressed();
                 }
             }
             else if (isUpEvent && _isTargetDown)
@@ -236,104 +241,50 @@ public class GlobalHotkeyService : IDisposable
                 if (holdDuration >= HybridHoldThresholdMs)
                 {
                     _isRecording = false;
-                    HotkeyReleased?.Invoke(this, EventArgs.Empty);
+                    RaiseHotkeyReleased();
                 }
             }
         }
     }
 
-    private static bool TryGetMouseEvent(nint wParam, nint lParam, out int vkCode, out bool isDownEvent, out bool isUpEvent)
+    private void RaiseHotkeyPressed()
     {
-        vkCode = 0;
-        isDownEvent = false;
-        isUpEvent = false;
+        RaiseHotkeyEvent(HotkeyPressed);
+    }
 
-        if (wParam == WM_LBUTTONDOWN)
+    private void RaiseHotkeyReleased()
+    {
+        RaiseHotkeyEvent(HotkeyReleased);
+    }
+
+    private void RaiseHotkeyEvent(EventHandler? handler)
+    {
+        if (handler == null)
         {
-            vkCode = VK_LBUTTON;
-            isDownEvent = true;
-            return true;
+            return;
         }
 
-        if (wParam == WM_LBUTTONUP)
+        if (_eventContext != null)
         {
-            vkCode = VK_LBUTTON;
-            isUpEvent = true;
-            return true;
+            _eventContext.Post(_ => handler(this, EventArgs.Empty), null);
+            return;
         }
 
-        if (wParam == WM_RBUTTONDOWN)
-        {
-            vkCode = VK_RBUTTON;
-            isDownEvent = true;
-            return true;
-        }
-
-        if (wParam == WM_RBUTTONUP)
-        {
-            vkCode = VK_RBUTTON;
-            isUpEvent = true;
-            return true;
-        }
-
-        if (wParam == WM_MBUTTONDOWN)
-        {
-            vkCode = VK_MBUTTON;
-            isDownEvent = true;
-            return true;
-        }
-
-        if (wParam == WM_MBUTTONUP)
-        {
-            vkCode = VK_MBUTTON;
-            isUpEvent = true;
-            return true;
-        }
-
-        if (wParam != WM_XBUTTONDOWN && wParam != WM_XBUTTONUP)
-        {
-            return false;
-        }
-
-        var hookData = Marshal.PtrToStructure<MsllHookStruct>(lParam);
-        ushort buttonData = (ushort)((hookData.MouseData >> 16) & 0xFFFF);
-
-        if (buttonData == XBUTTON1)
-        {
-            vkCode = VK_XBUTTON1;
-        }
-        else if (buttonData == XBUTTON2)
-        {
-            vkCode = VK_XBUTTON2;
-        }
-        else
-        {
-            return false;
-        }
-
-        isDownEvent = wParam == WM_XBUTTONDOWN;
-        isUpEvent = wParam == WM_XBUTTONUP;
-        return true;
+        ThreadPool.QueueUserWorkItem(_ => handler(this, EventArgs.Empty));
     }
 
     public void Dispose()
     {
+        _mouseTargetPollTimer.Dispose();
+
         if (_keyboardHookId != nint.Zero)
         {
             UnhookWindowsHookEx(_keyboardHookId);
-        }
-
-        if (_mouseHookId != nint.Zero)
-        {
-            UnhookWindowsHookEx(_mouseHookId);
         }
     }
 
     [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true, EntryPoint = "SetWindowsHookEx")]
     private static extern nint SetWindowsHookExKeyboard(int idHook, LowLevelKeyboardProc lpfn, nint hMod, uint dwThreadId);
-
-    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true, EntryPoint = "SetWindowsHookEx")]
-    private static extern nint SetWindowsHookExMouse(int idHook, LowLevelMouseProc lpfn, nint hMod, uint dwThreadId);
 
     [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -351,7 +302,7 @@ public class GlobalHotkeyService : IDisposable
     private bool AreModifiersPressed()
     {
         if (TargetModifiers == 0) return true;
-        
+
         bool ctrlRequired = (TargetModifiers & ModifierCtrl) != 0;
         bool altRequired = (TargetModifiers & ModifierAlt) != 0;
         bool shiftRequired = (TargetModifiers & ModifierShift) != 0;

@@ -236,12 +236,14 @@ public partial class MainWindow : Window
         base.OnStateChanged(e);
         if (WindowState == WindowState.Minimized)
         {
+            CancelHotkeyRecording();
             Hide();
         }
     }
 
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
+        CancelHotkeyRecording();
         e.Cancel = true;
         Hide();
     }
@@ -250,13 +252,12 @@ public partial class MainWindow : Window
     {
         if (_isRecordingHotkey)
         {
-            _isRecordingHotkey = false;
-            RecordHotkeyButton.Content = "Record";
-            HotkeyDisplayBox.Text = GetHotkeyDisplayString(_pendingHotkeyModifiers, _pendingHotkeyVirtualKey);
+            CancelHotkeyRecording();
             return;
         }
 
         _isRecordingHotkey = true;
+        _app.Orchestrator.SetHotkeyEnabled(false);
         RecordHotkeyButton.Content = "Cancel";
         _recordingModifierMask = 0;
         HotkeyDisplayBox.Text = "Press key or mouse combo...";
@@ -375,7 +376,22 @@ public partial class MainWindow : Window
         HotkeyDisplayBox.Text = GetHotkeyDisplayString(modifiers, vkCode);
         _isRecordingHotkey = false;
         _recordingModifierMask = 0;
+        _app.Orchestrator.SetHotkeyEnabled(true);
         RecordHotkeyButton.Content = "Record";
+    }
+
+    private void CancelHotkeyRecording()
+    {
+        if (!_isRecordingHotkey)
+        {
+            return;
+        }
+
+        _isRecordingHotkey = false;
+        _recordingModifierMask = 0;
+        _app.Orchestrator.SetHotkeyEnabled(true);
+        RecordHotkeyButton.Content = "Record";
+        HotkeyDisplayBox.Text = GetHotkeyDisplayString(_pendingHotkeyModifiers, _pendingHotkeyVirtualKey);
     }
 
     private bool IsEventFromRecordButton(object? source)
