@@ -16,6 +16,8 @@ public class DeepgramStreamingService : IDisposable
     public event EventHandler<string>? TranscriptReceived;
     public event EventHandler<string>? ErrorOccurred;
     public event EventHandler? ConnectionClosed;
+    public event EventHandler? SpeechStarted;
+    public event EventHandler? UtteranceEnded;
 
     public bool IsConnected => _isConnected;
 
@@ -28,7 +30,7 @@ public class DeepgramStreamingService : IDisposable
             _webSocket.Options.SetRequestHeader("Authorization", $"Token {apiKey}");
             _webSocket.Options.KeepAliveInterval = TimeSpan.FromSeconds(5);
 
-            var uri = new Uri($"wss://api.deepgram.com/v1/listen?model={model}&language={language}&encoding=linear16&sample_rate=16000&channels=1&punctuate=true&smart_format=true");
+            var uri = new Uri($"wss://api.deepgram.com/v1/listen?model={model}&language={language}&encoding=linear16&sample_rate=16000&channels=1&punctuate=true&smart_format=true&interim_results=true&vad_events=true&utterance_end_ms=1000");
 
             using var connectCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, connectCts.Token);
@@ -154,13 +156,21 @@ public class DeepgramStreamingService : IDisposable
         {
             var response = JsonSerializer.Deserialize<DeepgramResponse>(json);
 
-            if (response?.Type == "Results" && response.IsFinal == true)
+            switch (response?.Type)
             {
-                var transcript = response.Channel?.Alternatives?.FirstOrDefault()?.Transcript;
-                if (!string.IsNullOrWhiteSpace(transcript))
-                {
-                    TranscriptReceived?.Invoke(this, transcript);
-                }
+                case "Results" when response.IsFinal == true:
+                    var transcript = response.Channel?.Alternatives?.FirstOrDefault()?.Transcript;
+                    if (!string.IsNullOrWhiteSpace(transcript))
+                    {
+                        TranscriptReceived?.Invoke(this, transcript);
+                    }
+                    break;
+                case "SpeechStarted":
+                    SpeechStarted?.Invoke(this, EventArgs.Empty);
+                    break;
+                case "UtteranceEnd":
+                    UtteranceEnded?.Invoke(this, EventArgs.Empty);
+                    break;
             }
         }
         catch (Exception ex)

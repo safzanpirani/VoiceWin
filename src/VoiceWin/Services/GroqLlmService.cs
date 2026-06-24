@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace VoiceWin.Services;
 
@@ -15,6 +16,7 @@ public class GroqLlmService
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
     private const string API_URL = "https://api.groq.com/openai/v1/chat/completions";
+    private static readonly Regex _thinkBlockRegex = new(@"<think>.*?</think>", RegexOptions.Singleline | RegexOptions.Compiled);
 
     public async Task<LlmResult> EnhanceTextAsync(string text, string apiKey, string systemPrompt, string model)
     {
@@ -33,7 +35,8 @@ public class GroqLlmService
                     new Message { Role = "user", Content = userContent }
                 },
                 Temperature = 0.3,
-                MaxTokens = 4096
+                MaxTokens = 4096,
+                ReasoningEffort = model.Contains("qwen", StringComparison.OrdinalIgnoreCase) ? "none" : null
             };
 
             var json = JsonSerializer.Serialize(requestBody, _jsonOptions);
@@ -57,7 +60,8 @@ public class GroqLlmService
             }
 
             var result = JsonSerializer.Deserialize<ChatCompletionResponse>(responseBody, _jsonOptions);
-            var enhancedText = (result?.Choices?.FirstOrDefault()?.Message?.Content?.Trim() ?? "") + " ";
+            var rawText = result?.Choices?.FirstOrDefault()?.Message?.Content ?? "";
+            var enhancedText = _thinkBlockRegex.Replace(rawText, "").Trim() + " ";
 
             return new LlmResult
             {
@@ -90,6 +94,9 @@ public class GroqLlmService
 
         [JsonPropertyName("max_tokens")]
         public int MaxTokens { get; set; }
+
+        [JsonPropertyName("reasoning_effort")]
+        public string? ReasoningEffort { get; set; }
     }
 
     private class Message

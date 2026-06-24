@@ -6,6 +6,7 @@ public class AppSettings
     public string? DeepgramApiKey { get; set; }
     public string TranscriptionProvider { get; set; } = "groq";
     public string GroqModel { get; set; } = "whisper-large-v3-turbo";
+    public int InputDeviceNumber { get; set; } = -1; // -1 = system default
     public string DeepgramModel { get; set; } = "nova-3";
     public string HotkeyMode { get; set; } = "hold";
     public int HotkeyVirtualKey { get; set; } = 165;

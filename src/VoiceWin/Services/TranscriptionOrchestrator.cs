@@ -68,19 +68,29 @@ public class TranscriptionOrchestrator : IDisposable
 
         _streamingService.TranscriptReceived += OnStreamingTranscriptReceived;
         _streamingService.ErrorOccurred += (s, err) => StatusChanged?.Invoke(this, err);
+        _streamingService.SpeechStarted += (s, e) => _lastSpeechTime = DateTime.UtcNow;
+        _streamingService.UtteranceEnded += (s, e) => _lastSpeechTime = DateTime.UtcNow;
     }
 
     private void OnHotkeyPressed(object? sender, EventArgs e)
     {
-        if (_isProcessing || _isStreaming) return;
+        if (_isProcessing || _isStreaming)
+        {
+            StatusChanged?.Invoke(this, "Busy, please wait...");
+            _hotkeyService.CancelToggle();
+            return;
+        }
 
         var settings = _settingsService.Settings;
         
         if (string.IsNullOrEmpty(settings.GroqApiKey) && string.IsNullOrEmpty(settings.DeepgramApiKey))
         {
             StatusChanged?.Invoke(this, "No API key configured");
+            _hotkeyService.CancelToggle();
             return;
         }
+
+        _audioService.DeviceNumber = settings.InputDeviceNumber;
 
         if (settings.TranscriptionProvider == "deepgram-streaming" && !string.IsNullOrEmpty(settings.DeepgramApiKey))
         {
@@ -118,7 +128,6 @@ public class TranscriptionOrchestrator : IDisposable
         _lastSpeechTime = DateTime.UtcNow;
         StatusChanged?.Invoke(this, "Recording (streaming)...");
         _audioService.StartRecording();
-        RecordingStarted?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnAudioChunkAvailable(object? sender, AudioChunkEventArgs e)
@@ -131,12 +140,8 @@ public class TranscriptionOrchestrator : IDisposable
         if (_isStreaming && _streamingService.IsConnected)
         {
             _streamingService.SendAudio(e.Buffer, e.BytesRecorded);
-            
+
             var settings = _settingsService.Settings;
-            if (settings.VadEnabled && isSpeaking)
-            {
-                _lastSpeechTime = DateTime.UtcNow;
-            }
 
             if (!_isAutoStopping && settings.VadEnabled && settings.VadStreamingSilenceTimeoutSeconds > 0)
             {
@@ -159,18 +164,16 @@ public class TranscriptionOrchestrator : IDisposable
         try
         {
             if (!_isStreaming) return;
-            
+            _isStreaming = false;
+
             StatusChanged?.Invoke(this, "Auto-stopped (silence timeout)");
-            
+
             _audioService.StopRecording();
             await _streamingService.CloseAsync();
-            
-            RecordingStopped?.Invoke(this, EventArgs.Empty);
         }
         catch { }
         finally
         {
-            _isStreaming = false;
             _isAutoStopping = false;
         }
     }
@@ -218,7 +221,8 @@ public class TranscriptionOrchestrator : IDisposable
     {
         if (_isStreaming)
         {
-            StopStreamingRecording();
+            if (!_isAutoStopping)
+                StopStreamingRecording();
             return;
         }
 
@@ -236,15 +240,15 @@ public class TranscriptionOrchestrator : IDisposable
 
     private async void StopStreamingRecording()
     {
+        if (!_isStreaming) return;
+        _isStreaming = false;
+
         StatusChanged?.Invoke(this, "Finalizing...");
         _audioService.StopRecording();
-        
+
         await _streamingService.CloseAsync();
-        
+
         var duration = DateTime.UtcNow - _streamingStartTime;
-        _isStreaming = false;
-        
-        RecordingStopped?.Invoke(this, EventArgs.Empty);
         StatusChanged?.Invoke(this, $"Streamed in {duration.TotalMilliseconds:F0}ms");
     }
 

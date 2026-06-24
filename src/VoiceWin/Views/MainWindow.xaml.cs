@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using VoiceWin.Services;
 
 namespace VoiceWin.Views;
@@ -27,6 +28,12 @@ public partial class MainWindow : Window
         SubscribeToEvents();
 
         TaskbarIcon.IconSource = _trayIconService.CreateIconWithStatus(TrayStatus.Ready);
+
+        if (_app.SettingsService.Settings.StartMinimized)
+        {
+            ShowActivated = false;
+            WindowState = WindowState.Minimized;
+        }
     }
 
     private void LoadSettings()
@@ -37,21 +44,46 @@ public partial class MainWindow : Window
         DeepgramApiKeyBox.Text = settings.DeepgramApiKey ?? "";
 
         SelectComboItemByTag(ProviderCombo, settings.TranscriptionProvider);
+        PopulateInputDevices(settings.InputDeviceNumber);
+        SelectComboItemByTag(GroqModelCombo, settings.GroqModel);
+        SelectComboItemByTag(DeepgramModelCombo, settings.DeepgramModel);
         SelectComboItemByTag(HotkeyModeCombo, settings.HotkeyMode);
         SelectComboItemByTag(OverlayPositionCombo, settings.OverlayPosition);
         SelectComboItemByTag(LanguageCombo, settings.Language);
 
         AiEnhancementCheckBox.IsChecked = settings.AiEnhancementEnabled;
+        SelectComboItemByTag(AiEnhancementModelCombo, settings.AiEnhancementModel);
         AiEnhancementPromptBox.Text = settings.AiEnhancementPrompt;
 
         VadEnabledCheckBox.IsChecked = settings.VadEnabled;
         VadSilenceTimeoutBox.Text = settings.VadStreamingSilenceTimeoutSeconds.ToString();
+
+        ShowOverlayCheckBox.IsChecked = settings.ShowRecordingOverlay;
+        StartWithWindowsCheckBox.IsChecked = settings.StartWithWindows;
+        StartMinimizedCheckBox.IsChecked = settings.StartMinimized;
 
         _pendingHotkeyVirtualKey = settings.HotkeyVirtualKey;
         _pendingHotkeyModifiers = settings.HotkeyModifiers;
         HotkeyDisplayBox.Text = GetHotkeyDisplayString(_pendingHotkeyModifiers, _pendingHotkeyVirtualKey);
 
         _statusOverlay.SetPosition(settings.OverlayPosition);
+    }
+
+    private void PopulateInputDevices(int selectedDeviceNumber)
+    {
+        InputDeviceCombo.Items.Clear();
+        InputDeviceCombo.Items.Add(new ComboBoxItem { Content = "System Default", Tag = "-1" });
+
+        foreach (var device in AudioRecordingService.GetInputDevices())
+        {
+            InputDeviceCombo.Items.Add(new ComboBoxItem
+            {
+                Content = device.Name,
+                Tag = device.Number.ToString()
+            });
+        }
+
+        SelectComboItemByTag(InputDeviceCombo, selectedDeviceNumber.ToString());
     }
 
     private void SelectComboItemByTag(ComboBox combo, string tag)
@@ -83,10 +115,13 @@ public partial class MainWindow : Window
                 TaskbarIcon.ToolTipText = "VoiceWin - Recording...";
                 TaskbarIcon.IconSource = _trayIconService.CreateIconWithStatus(TrayStatus.Recording);
                 
-                bool isStreaming = _app.SettingsService.Settings.TranscriptionProvider == "deepgram-streaming";
-                _statusOverlay.SetMode(isStreaming);
-                _statusOverlay.UpdateStatus("Recording");
-                _statusOverlay.StartAnimating();
+                if (_app.SettingsService.Settings.ShowRecordingOverlay)
+                {
+                    bool isStreaming = _app.SettingsService.Settings.TranscriptionProvider == "deepgram-streaming";
+                    _statusOverlay.SetMode(isStreaming);
+                    _statusOverlay.UpdateStatus("Recording");
+                    _statusOverlay.StartAnimating();
+                }
             });
         };
 
@@ -159,29 +194,75 @@ public partial class MainWindow : Window
 
     private void SaveSettings_Click(object sender, RoutedEventArgs e)
     {
+        if (!int.TryParse(VadSilenceTimeoutBox.Text, out int timeout) || timeout < 0)
+        {
+            StatusText.Text = "Invalid silence timeout (must be a non-negative number)";
+            return;
+        }
+
         _app.SettingsService.UpdateSettings(settings =>
         {
             settings.GroqApiKey = GroqApiKeyBox.Text.Trim();
             settings.DeepgramApiKey = DeepgramApiKeyBox.Text.Trim();
             settings.TranscriptionProvider = GetSelectedTag(ProviderCombo);
+            if (int.TryParse(GetSelectedTag(InputDeviceCombo), out int deviceNumber))
+            {
+                settings.InputDeviceNumber = deviceNumber;
+            }
+            settings.GroqModel = GetSelectedTag(GroqModelCombo);
+            settings.DeepgramModel = GetSelectedTag(DeepgramModelCombo);
             settings.HotkeyMode = GetSelectedTag(HotkeyModeCombo);
             settings.OverlayPosition = GetSelectedTag(OverlayPositionCombo);
             settings.Language = GetSelectedTag(LanguageCombo);
             settings.AiEnhancementEnabled = AiEnhancementCheckBox.IsChecked ?? false;
+            settings.AiEnhancementModel = GetSelectedTag(AiEnhancementModelCombo);
             settings.AiEnhancementPrompt = AiEnhancementPromptBox.Text;
             settings.VadEnabled = VadEnabledCheckBox.IsChecked ?? true;
-            if (int.TryParse(VadSilenceTimeoutBox.Text, out int timeout))
-            {
-                settings.VadStreamingSilenceTimeoutSeconds = timeout;
-            }
+            settings.VadStreamingSilenceTimeoutSeconds = timeout;
+            settings.ShowRecordingOverlay = ShowOverlayCheckBox.IsChecked ?? true;
+            settings.StartWithWindows = StartWithWindowsCheckBox.IsChecked ?? false;
+            settings.StartMinimized = StartMinimizedCheckBox.IsChecked ?? true;
             settings.HotkeyVirtualKey = _pendingHotkeyVirtualKey;
             settings.HotkeyModifiers = _pendingHotkeyModifiers;
         });
 
         _app.Orchestrator.UpdateHotkeySettings();
         _statusOverlay.SetPosition(_app.SettingsService.Settings.OverlayPosition);
+        ApplyStartWithWindows(_app.SettingsService.Settings.StartWithWindows);
 
         StatusText.Text = "Settings saved!";
+        ResetStatusTextAfterDelay();
+    }
+
+    private void ResetStatusTextAfterDelay()
+    {
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        timer.Tick += (s, e) =>
+        {
+            timer.Stop();
+            StatusText.Text = "Ready - Press your hotkey to record";
+        };
+        timer.Start();
+    }
+
+    private static void ApplyStartWithWindows(bool enabled)
+    {
+        const string runKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
+        const string valueName = "VoiceWin";
+
+        using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(runKey, writable: true);
+        if (key == null) return;
+
+        if (enabled)
+        {
+            var exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
+            if (!string.IsNullOrEmpty(exePath))
+                key.SetValue(valueName, $"\"{exePath}\"");
+        }
+        else
+        {
+            key.DeleteValue(valueName, throwOnMissingValue: false);
+        }
     }
 
     private void ShowWindow_Click(object sender, RoutedEventArgs e)

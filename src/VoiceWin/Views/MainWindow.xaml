@@ -88,6 +88,40 @@
                     <ComboBoxItem Content="Deepgram Streaming (nova-3)" Tag="deepgram-streaming"/>
                 </ComboBox>
 
+                <TextBlock Text="Recording Device" 
+                           FontSize="16" 
+                           FontWeight="SemiBold" 
+                           Foreground="{StaticResource TextBrush}"
+                           Margin="0,8,0,12"/>
+
+                <ComboBox x:Name="InputDeviceCombo" Margin="0,0,0,16"/>
+
+                <TextBlock Text="Groq Model" 
+                           FontSize="16" 
+                           FontWeight="SemiBold" 
+                           Foreground="{StaticResource TextBrush}"
+                           Margin="0,8,0,12"/>
+
+                <ComboBox x:Name="GroqModelCombo" Margin="0,0,0,16">
+                    <ComboBoxItem Content="Whisper Large v3 Turbo (fast)" Tag="whisper-large-v3-turbo"/>
+                    <ComboBoxItem Content="Whisper Large v3 (accurate)" Tag="whisper-large-v3"/>
+                    <ComboBoxItem Content="Distil Whisper Large v3 (English)" Tag="distil-whisper-large-v3-en"/>
+                </ComboBox>
+
+                <TextBlock Text="Deepgram Model" 
+                           FontSize="16" 
+                           FontWeight="SemiBold" 
+                           Foreground="{StaticResource TextBrush}"
+                           Margin="0,8,0,12"/>
+
+                <ComboBox x:Name="DeepgramModelCombo" Margin="0,0,0,16">
+                    <ComboBoxItem Content="Nova-3 (latest)" Tag="nova-3"/>
+                    <ComboBoxItem Content="Nova-2" Tag="nova-2"/>
+                    <ComboBoxItem Content="Nova" Tag="nova"/>
+                    <ComboBoxItem Content="Enhanced" Tag="enhanced"/>
+                    <ComboBoxItem Content="Base" Tag="base"/>
+                </ComboBox>
+
                 <TextBlock Text="Hotkey" 
                            FontSize="16" 
                            FontWeight="SemiBold" 
@@ -172,6 +206,16 @@
                           Content="Enable AI Enhancement"
                           Margin="0,0,0,12"/>
 
+                <Label Content="Enhancement Model" Margin="0,0,0,4"/>
+                <ComboBox x:Name="AiEnhancementModelCombo" Margin="0,0,0,12">
+                    <ComboBoxItem Content="Kimi K2 Instruct (0905)" Tag="moonshotai/kimi-k2-instruct-0905"/>
+                    <ComboBoxItem Content="Llama 3.3 70B Versatile" Tag="llama-3.3-70b-versatile"/>
+                    <ComboBoxItem Content="Llama 3.1 8B Instant" Tag="llama-3.1-8b-instant"/>
+                    <ComboBoxItem Content="GPT-OSS 120B" Tag="openai/gpt-oss-120b"/>
+                    <ComboBoxItem Content="GPT-OSS 20B" Tag="openai/gpt-oss-20b"/>
+                    <ComboBoxItem Content="Qwen3.6 27B" Tag="qwen/qwen3.6-27b"/>
+                </ComboBox>
+
                 <Label Content="Enhancement Prompt" Margin="0,0,0,4"/>
                 <TextBox x:Name="AiEnhancementPromptBox" 
                          AcceptsReturn="True" 
@@ -192,6 +236,24 @@
                 <Label Content="Silence Timeout for Streaming (seconds)" Margin="0,0,0,4"/>
                 <TextBox x:Name="VadSilenceTimeoutBox" 
                          Margin="0,0,0,24"/>
+
+                <TextBlock Text="General" 
+                           FontSize="16" 
+                           FontWeight="SemiBold" 
+                           Foreground="{StaticResource TextBrush}"
+                           Margin="0,8,0,12"/>
+
+                <CheckBox x:Name="ShowOverlayCheckBox" 
+                          Content="Show recording overlay"
+                          Margin="0,0,0,12"/>
+
+                <CheckBox x:Name="StartWithWindowsCheckBox" 
+                          Content="Start with Windows"
+                          Margin="0,0,0,12"/>
+
+                <CheckBox x:Name="StartMinimizedCheckBox" 
+                          Content="Start minimized to tray"
+                          Margin="0,0,0,24"/>
 
                 <Button Content="Save Settings" 
                         Click="SaveSettings_Click"

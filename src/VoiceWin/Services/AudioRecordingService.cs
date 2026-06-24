@@ -24,6 +24,17 @@ public class AudioRecordingService : IDisposable
 
     public bool IsRecording => _isRecording;
     public WaveFormat? WaveFormat => _waveIn?.WaveFormat;
+    public int DeviceNumber { get; set; } = -1;
+
+    public static IReadOnlyList<(int Number, string Name)> GetInputDevices()
+    {
+        var devices = new List<(int, string)>();
+        for (int i = 0; i < WaveInEvent.DeviceCount; i++)
+        {
+            devices.Add((i, WaveInEvent.GetCapabilities(i).ProductName));
+        }
+        return devices;
+    }
 
     public event EventHandler? RecordingStarted;
     public event EventHandler? RecordingStopped;
@@ -36,7 +47,8 @@ public class AudioRecordingService : IDisposable
         _audioStream = new MemoryStream();
         _waveIn = new WaveInEvent
         {
-            WaveFormat = new WaveFormat(16000, 16, 1)
+            WaveFormat = new WaveFormat(16000, 16, 1),
+            DeviceNumber = DeviceNumber >= 0 && DeviceNumber < WaveInEvent.DeviceCount ? DeviceNumber : -1
         };
 
         _waveWriter = new WaveFileWriter(_audioStream, _waveIn.WaveFormat);

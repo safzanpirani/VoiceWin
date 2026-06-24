@@ -18,6 +18,7 @@ public class GlobalHotkeyService : IDisposable
     
     private bool _toggleState;
     private bool _isRecording;
+    private bool _recordingStartedByTap;
     private const int HybridHoldThresholdMs = 250;
     
     private const int WH_KEYBOARD_LL = 13;
@@ -98,10 +99,11 @@ public class GlobalHotkeyService : IDisposable
                     {
                         _isKeyDown = true;
                         _keyDownTime = DateTime.UtcNow;
-                        
+
                         if (!_isRecording)
                         {
                             _isRecording = true;
+                            _recordingStartedByTap = false;
                             HotkeyPressed?.Invoke(this, EventArgs.Empty);
                         }
                     }
@@ -109,10 +111,27 @@ public class GlobalHotkeyService : IDisposable
                     {
                         _isKeyDown = false;
                         var holdDuration = (DateTime.UtcNow - _keyDownTime).TotalMilliseconds;
-                        
+
                         if (holdDuration >= HybridHoldThresholdMs)
                         {
+                            // Hold gesture: stop on release.
+                            if (_isRecording)
+                            {
+                                _isRecording = false;
+                                _recordingStartedByTap = false;
+                                HotkeyReleased?.Invoke(this, EventArgs.Empty);
+                            }
+                        }
+                        else if (!_recordingStartedByTap)
+                        {
+                            // First quick tap: keep recording (toggle on).
+                            _recordingStartedByTap = true;
+                        }
+                        else
+                        {
+                            // Second quick tap: toggle off.
                             _isRecording = false;
+                            _recordingStartedByTap = false;
                             HotkeyReleased?.Invoke(this, EventArgs.Empty);
                         }
                     }
@@ -123,6 +142,13 @@ public class GlobalHotkeyService : IDisposable
         }
 
         return CallNextHookEx(_hookId, nCode, wParam, lParam);
+    }
+
+    public void CancelToggle()
+    {
+        _toggleState = false;
+        _isRecording = false;
+        _recordingStartedByTap = false;
     }
 
     public void Dispose()
