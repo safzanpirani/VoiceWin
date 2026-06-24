@@ -143,7 +143,7 @@ public class TranscriptionOrchestrator : IDisposable
 
             var settings = _settingsService.Settings;
 
-            if (!_isAutoStopping && settings.VadEnabled && settings.VadStreamingSilenceTimeoutSeconds > 0)
+            if (!_isAutoStopping && settings.VadStreamingSilenceTimeoutSeconds > 0)
             {
                 var silenceDuration = DateTime.UtcNow - _lastSpeechTime;
                 if (silenceDuration.TotalSeconds >= settings.VadStreamingSilenceTimeoutSeconds)
@@ -213,6 +213,9 @@ public class TranscriptionOrchestrator : IDisposable
                 finalText = enhanceResult.Text;
             }
         }
+
+        if (!finalText.EndsWith(' '))
+            finalText += " ";
 
         _pasteService.PasteText(finalText);
     }

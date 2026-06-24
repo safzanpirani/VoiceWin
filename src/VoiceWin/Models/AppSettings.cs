@@ -39,5 +39,5 @@ public class AppSettings
     public bool VadEnabled { get; set; } = true;
     public float VadThreshold { get; set; } = 0.5f;
     public int VadMinSilenceDurationMs { get; set; } = 500;
-    public int VadStreamingSilenceTimeoutSeconds { get; set; } = 60;
+    public int VadStreamingSilenceTimeoutSeconds { get; set; } = 15;
 }

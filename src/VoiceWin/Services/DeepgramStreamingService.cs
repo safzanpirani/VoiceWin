@@ -1,7 +1,6 @@
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace VoiceWin.Services;
 
@@ -154,15 +153,31 @@ public class DeepgramStreamingService : IDisposable
     {
         try
         {
-            var response = JsonSerializer.Deserialize<DeepgramResponse>(json);
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
 
-            switch (response?.Type)
+            if (!root.TryGetProperty("type", out var typeElement))
+                return;
+
+            var type = typeElement.GetString();
+
+            switch (type)
             {
-                case "Results" when response.IsFinal == true:
-                    var transcript = response.Channel?.Alternatives?.FirstOrDefault()?.Transcript;
-                    if (!string.IsNullOrWhiteSpace(transcript))
+                case "Results":
+                    bool isFinal = root.TryGetProperty("is_final", out var finalElement) && finalElement.GetBoolean();
+                    if (!isFinal) return;
+
+                    if (root.TryGetProperty("channel", out var channel) &&
+                        channel.TryGetProperty("alternatives", out var alternatives) &&
+                        alternatives.ValueKind == JsonValueKind.Array &&
+                        alternatives.GetArrayLength() > 0 &&
+                        alternatives[0].TryGetProperty("transcript", out var transcriptElement))
                     {
-                        TranscriptReceived?.Invoke(this, transcript);
+                        var transcript = transcriptElement.GetString();
+                        if (!string.IsNullOrWhiteSpace(transcript))
+                        {
+                            TranscriptReceived?.Invoke(this, transcript);
+                        }
                     }
                     break;
                 case "SpeechStarted":
@@ -184,29 +199,5 @@ public class DeepgramStreamingService : IDisposable
         _cts?.Cancel();
         _webSocket?.Dispose();
         _cts?.Dispose();
-    }
-
-    private class DeepgramResponse
-    {
-        [JsonPropertyName("type")]
-        public string? Type { get; set; }
-
-        [JsonPropertyName("is_final")]
-        public bool? IsFinal { get; set; }
-
-        [JsonPropertyName("channel")]
-        public ChannelInfo? Channel { get; set; }
-    }
-
-    private class ChannelInfo
-    {
-        [JsonPropertyName("alternatives")]
-        public Alternative[]? Alternatives { get; set; }
-    }
-
-    private class Alternative
-    {
-        [JsonPropertyName("transcript")]
-        public string? Transcript { get; set; }
     }
 }
