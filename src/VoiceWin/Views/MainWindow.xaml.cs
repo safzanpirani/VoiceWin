@@ -55,7 +55,6 @@ public partial class MainWindow : Window
         SelectComboItemByTag(AiEnhancementModelCombo, settings.AiEnhancementModel);
         AiEnhancementPromptBox.Text = settings.AiEnhancementPrompt;
 
-        VadEnabledCheckBox.IsChecked = settings.VadEnabled;
         VadSilenceTimeoutBox.Text = settings.VadStreamingSilenceTimeoutSeconds.ToString();
 
         ShowOverlayCheckBox.IsChecked = settings.ShowRecordingOverlay;
@@ -217,7 +216,6 @@ public partial class MainWindow : Window
             settings.AiEnhancementEnabled = AiEnhancementCheckBox.IsChecked ?? false;
             settings.AiEnhancementModel = GetSelectedTag(AiEnhancementModelCombo);
             settings.AiEnhancementPrompt = AiEnhancementPromptBox.Text;
-            settings.VadEnabled = VadEnabledCheckBox.IsChecked ?? true;
             settings.VadStreamingSilenceTimeoutSeconds = timeout;
             settings.ShowRecordingOverlay = ShowOverlayCheckBox.IsChecked ?? true;
             settings.StartWithWindows = StartWithWindowsCheckBox.IsChecked ?? false;

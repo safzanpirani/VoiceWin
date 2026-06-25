@@ -35,9 +35,6 @@ public class AppSettings
 - Output only the cleaned text, nothing else";
     public string AiEnhancementModel { get; set; } = "moonshotai/kimi-k2-instruct-0905";
 
-    // Voice Activity Detection
-    public bool VadEnabled { get; set; } = true;
-    public float VadThreshold { get; set; } = 0.5f;
-    public int VadMinSilenceDurationMs { get; set; } = 500;
+    // Streaming auto-stop (server-side silence detection)
     public int VadStreamingSilenceTimeoutSeconds { get; set; } = 15;
 }

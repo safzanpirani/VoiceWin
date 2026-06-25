@@ -13,7 +13,6 @@ public class TranscriptionOrchestrator : IDisposable
     private readonly GlobalHotkeyService _hotkeyService;
     private readonly SettingsService _settingsService;
     private readonly SoundService _soundService;
-    private readonly VadService _vadService;
 
     private bool _isProcessing;
     private bool _isStreaming;
@@ -41,9 +40,6 @@ public class TranscriptionOrchestrator : IDisposable
         _pasteService = new TextPasteService();
         _hotkeyService = new GlobalHotkeyService();
         _soundService = new SoundService();
-        _vadService = new VadService();
-
-        _vadService.Initialize();
 
         _hotkeyService.TargetVirtualKey = _settingsService.Settings.HotkeyVirtualKey;
         _hotkeyService.TargetModifiers = _settingsService.Settings.HotkeyModifiers;
@@ -170,6 +166,8 @@ public class TranscriptionOrchestrator : IDisposable
 
             _audioService.StopRecording();
             await _streamingService.CloseAsync();
+
+            _hotkeyService.CancelToggle();
         }
         catch { }
         finally
@@ -268,21 +266,6 @@ public class TranscriptionOrchestrator : IDisposable
             var settings = _settingsService.Settings;
             var processedAudio = audioData;
 
-            if (settings.VadEnabled && _vadService.IsInitialized)
-            {
-                StatusChanged?.Invoke(this, "Detecting speech...");
-                processedAudio = _vadService.TrimSilence(
-                    audioData,
-                    settings.VadThreshold,
-                    settings.VadMinSilenceDurationMs);
-
-                if (processedAudio.Length == 0)
-                {
-                    StatusChanged?.Invoke(this, "No speech detected");
-                    return;
-                }
-            }
-
             TranscriptionResult result;
 
             if (settings.TranscriptionProvider == "deepgram" && !string.IsNullOrEmpty(settings.DeepgramApiKey))
@@ -365,6 +348,5 @@ public class TranscriptionOrchestrator : IDisposable
         _audioService.Dispose();
         _streamingService.Dispose();
         _soundService.Dispose();
-        _vadService.Dispose();
     }
 }
